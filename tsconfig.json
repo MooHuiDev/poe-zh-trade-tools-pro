@@ -1,0 +1,12 @@
+{
+  "extends": "./.wxt/tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "~assets/*": ["./assets/*"],
+      "~components/*": ["./components/*"],
+      "~lib/*": ["./lib/*"],
+      "~/*": ["./*"]
+    },
+    "types": ["chrome"]
+  }
+}
