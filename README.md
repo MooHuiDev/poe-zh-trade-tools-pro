@@ -7,12 +7,14 @@
 
 > **Not affiliated with, authorized, or endorsed by Grinding Gear Games.**
 > "Path of Exile" is a trademark of Grinding Gear Games.
+>
 > 本擴充與 Grinding Gear Games 無關,未獲其授權或背書;「Path of Exile」為 GGG 之商標。
 
 > **Scope / 適用範圍:** This fork targets **Path of Exile 1 (International / Global
 > realm)**. As the maintainer only plays PoE1, **Path of Exile 2 has not been
 > modified**. Note: the **Taiwan/HK/Macau realm (operated by Hotcool) and the
 > Tencent (China) realm are not supported**.
+>
 > 本工具的改動以**《流亡黯道》一代(PoE1)國際服**為主;由於作者僅遊玩一代,**二代(PoE2)並未做任何修改**。注意:**不支援台港澳服(熱酷科技 Hotcool)與中國服(騰訊)**。
 
 ---
