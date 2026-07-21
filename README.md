@@ -15,7 +15,9 @@
 > modified**. Note: the **Taiwan/HK/Macau realm (operated by Hotcool) and the
 > Tencent (China) realm are not supported**.
 >
-> 本工具的改動以**《流亡黯道》一代(PoE1)國際服**為主;由於作者僅遊玩一代,**二代(PoE2)並未做任何修改**。注意:**不支援台港澳服(熱酷科技 Hotcool)與中國服(騰訊)**。
+> 本工具的改動以**《流亡黯道》一代(PoE1)國際服**為主;<br>
+> 二代(PoE2)並未做任何修改。<br>
+> 注意:本工具不支援台港澳服(熱酷科技 Hotcool)與中國服(騰訊)。
 
 ---
 
