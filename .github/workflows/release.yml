@@ -1,0 +1,52 @@
+name: Release
+
+# Push a tag like v3.28.01 and GitHub will build the extension and publish a
+# Release with the packaged zip attached automatically.
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build (Chrome)
+        run: pnpm run build:chrome
+
+      - name: Package zip
+        run: |
+          cd build/chrome-mv3
+          zip -r "../../poe-zh-trade-tools-pro-${GITHUB_REF_NAME}-chrome.zip" .
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: poe-zh-trade-tools-pro-*-chrome.zip
+          generate_release_notes: true
+          body: |
+            ### 安裝(開發者模式 / Load unpacked)
+            1. 下載並解壓下方的 zip
+            2. 開 `chrome://extensions`,右上角開啟「開發人員模式」
+            3. 點「載入未封裝項目」,選解壓後的資料夾
+
+            注意:此為未封裝安裝,書籤等資料與 Chrome 線上商店版分開;
+            一般使用者建議等商店自動更新。
