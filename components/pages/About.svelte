@@ -41,6 +41,13 @@
       </a>
     </p>
     <p class="about-footer__support">
+      <a class="about-link" href="https://github.com/MooHuiDev/poe-zh-trade-tools-pro" target="_blank" rel="noreferrer">
+        <img class="about-link__icon" src="https://cdn.simpleicons.org/github/f0e0bf" alt="" aria-hidden="true" />
+        <span>{translate($languageStore, "about.maintainer")}</span>
+        <strong>MooHui Dev</strong>
+      </a>
+    </p>
+    <p class="about-footer__support">
       <a class="about-link" href="https://www.patreon.com/cw/KroxiLabs" target="_blank" rel="noreferrer">
         <img class="about-link__icon" src="https://cdn.simpleicons.org/patreon/ff424d" alt="" aria-hidden="true" />
         <span>{translate($languageStore, "about.patreon")}</span>
@@ -48,13 +55,6 @@
       </a>
     </p>
     <p class="about-footer__meta">{translate($languageStore, "about.version", { version })}</p>
-    <p class="about-footer__support">
-      <a class="about-link" href="https://github.com/MooHuiDev/poe-zh-trade-tools-pro" target="_blank" rel="noreferrer">
-        <img class="about-link__icon" src="https://cdn.simpleicons.org/github/f0e0bf" alt="" aria-hidden="true" />
-        <span>{translate($languageStore, "about.maintainer")}</span>
-        <strong>MooHui Dev</strong>
-      </a>
-    </p>
   </footer>
 </section>
 
