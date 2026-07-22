@@ -46,7 +46,10 @@ export default defineConfig({
       "https://poe.ninja/*",
       // Official trade-data APIs used by the self-built translation core.
       "https://pathofexile.com/*",
-      "https://pathofexile.tw/*"
+      "https://pathofexile.tw/*",
+      // Remote unique-name dictionary (maintainer's own GitHub) so new unique
+      // names can update without a store release.
+      "https://raw.githubusercontent.com/*"
     ],
     icons: iconMap,
     action: {

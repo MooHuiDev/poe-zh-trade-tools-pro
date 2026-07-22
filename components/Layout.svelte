@@ -14,7 +14,6 @@ import About from "./pages/About.svelte";
   import FinerFilters from "./FinerFilters.svelte";
   import SvgIcon from "./SvgIcon.svelte";
   import WhatsNewDialog from "./WhatsNewDialog.svelte";
-  import WelcomeDialog from "./WelcomeDialog.svelte";
   import logoUrl from "~assets/logo.webp?inline";
   import { flashMessages } from "../lib/services/flash";
   import { bookmarksService } from "../lib/services/bookmarks";
@@ -40,8 +39,6 @@ import About from "./pages/About.svelte";
   let liveSidebarWidth: number | null = null;
   let loadedMinimizedStateKey: string | null = $state(null);
   let showOnboarding = $state(false);
-  let showWelcome = $state(false);
-  let welcomeLanguage = $state("en" as typeof $settings.language);
   let onboardingHighlightedPage: 'bookmarks' | 'bulk' | 'history' | 'about' | 'settings' | null = $state(null);
   let onboardingCurrentStepId:
     | 'create-folder'
@@ -195,7 +192,6 @@ import About from "./pages/About.svelte";
       void settings.useVersion(location.version);
       experimentalSettings.useVersion(location.version);
     });
-    welcomeLanguage = $settings.language;
     isDevBuild = import.meta.env.DEV;
     appVersion = hasValidExtensionContext()
       ? chrome.runtime.getManifest().version
@@ -208,11 +204,11 @@ import About from "./pages/About.svelte";
         storageService.setLocalValue(VERSION_NOTICE_SEEN_KEY, appVersion);
       }
     }
-    const shouldShowWelcome = storageService.getLocalValue(WELCOME_SEEN_KEY) !== "true";
+    // Language is auto-detected from the browser locale, so the first-run
+    // language-selection dialog is no longer shown; go straight to the tutorial.
+    storageService.setLocalValue(WELCOME_SEEN_KEY, "true");
     const shouldShowOnboarding = storageService.getLocalValue(ONBOARDING_SEEN_KEY) !== "true";
-    if (shouldShowWelcome) {
-      showWelcome = true;
-    } else if (shouldShowOnboarding) {
+    if (shouldShowOnboarding) {
       await openOnboarding();
     }
 
@@ -244,15 +240,6 @@ import About from "./pages/About.svelte";
     showOnboarding = true;
   };
 
-  const confirmWelcome = async () => {
-    await settings.updateLanguage(welcomeLanguage);
-    storageService.setLocalValue(WELCOME_SEEN_KEY, "true");
-    showWelcome = false;
-
-    if (storageService.getLocalValue(ONBOARDING_SEEN_KEY) !== "true") {
-      await openOnboarding();
-    }
-  };
 
   const dismissVersionNotice = () => {
     showVersionNotice = false;
@@ -499,14 +486,6 @@ import About from "./pages/About.svelte";
     showEquivalentStep={true}
     onClose={closeOnboarding}
     onStepChange={handleOnboardingStepChange} />
-
-  <WelcomeDialog
-    open={showWelcome}
-    selectedLanguage={welcomeLanguage}
-    onSelectLanguage={(language) => {
-      welcomeLanguage = language;
-    }}
-    onConfirm={confirmWelcome} />
 
   <WhatsNewDialog
     open={showWhatsNew}

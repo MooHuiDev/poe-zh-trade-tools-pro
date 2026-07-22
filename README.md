@@ -83,5 +83,8 @@ Chinese localization and integration is by **MooHui Dev**.
 本專案基於 KroxiLabs 的開源專案 **Poe Trade Plus**(MIT 授權);繁體 / 簡體中文化
 與整合由 **MooHui Dev** 製作。
 
+Some unique-item name references come from **[PoEDB](https://poedb.tw/)** (by chuanhsing) — thanks!
+部分傳奇物品名稱參考自 **[PoEDB](https://poedb.tw/)**(chuanhsing 製作),特此致謝。
+
 ## License
 [MIT](LICENSE) — original © KroxiLabs; localization fork © MooHui Dev.

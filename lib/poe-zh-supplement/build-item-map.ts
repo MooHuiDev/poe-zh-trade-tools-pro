@@ -45,6 +45,30 @@ const fetchItems = async (url: string): Promise<TradeItemsResponse> => {
   return response.json()
 }
 
+// Remote unique-name dictionary hosted on the maintainer's own GitHub. This lets
+// new/updated unique names reach users WITHOUT a Chrome Web Store update — just
+// edit the JSON and push it. The bundled dict.ts / dict-cn.ts remain the offline
+// fallback, so translation still works if this fetch fails (offline / blocked).
+// JSON shape: { "tw": { "<normalized-english-slug>": "中文名", ... }, "cn": { ... } }
+const REMOTE_DICT_URL =
+  "https://raw.githubusercontent.com/MooHuiDev/poe-zh-trade-tools-pro/main/data/unique-names.json"
+
+type RemoteDict = { tw?: Record<string, string>; cn?: Record<string, string> }
+
+const fetchRemoteDict = async (): Promise<RemoteDict | null> => {
+  try {
+    const res = await fetch(REMOTE_DICT_URL, {
+      credentials: "omit",
+      cache: "no-cache"
+    })
+    if (!res.ok) return null
+    const json = (await res.json()) as RemoteDict
+    return json && typeof json === "object" ? json : null
+  } catch {
+    return null
+  }
+}
+
 const readStorage = (keys: string[]): Promise<Record<string, unknown>> =>
   new Promise((resolve) =>
     chrome.storage.local.get(keys, (items) =>
@@ -66,6 +90,16 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
     const [us, tw] = await Promise.all([fetchItems(ITEMS_US), fetchItems(ITEMS_TW)])
     const usCategories = us.result ?? []
     const twCategories = tw.result ?? []
+
+    // Merge the remote (GitHub-hosted) unique dictionary over the bundled one.
+    // Remote entries win; if the fetch fails we fall back to bundled only.
+    const remoteDict = await fetchRemoteDict()
+    const TW_DICT: Record<string, string> = remoteDict?.tw
+      ? { ...SUPPLEMENT_ZH_TW, ...remoteDict.tw }
+      : SUPPLEMENT_ZH_TW
+    const CN_DICT: Record<string, string> = remoteDict?.cn
+      ? { ...SUPPLEMENT_ZH_CN, ...remoteDict.cn }
+      : SUPPLEMENT_ZH_CN
 
     const map: Record<string, string> = {}
 
@@ -128,7 +162,7 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
     // `text` becomes bilingual.
     const zhOf = (english: string) => {
       const key = normalize(english)
-      return SUPPLEMENT_ZH_TW[key] || map[key]
+      return TW_DICT[key] || map[key]
     }
     // reverse: Chinese display -> English text, so typing a Chinese item name in
     // a vue-multiselect search box (whose internal options are English) can be
@@ -177,7 +211,7 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
     for (const [k, v] of Object.entries(map)) cnMap[k] = toSimplified(v)
     const zhOfCn = (english: string) => {
       const key = normalize(english)
-      return SUPPLEMENT_ZH_CN[key] || cnMap[key]
+      return CN_DICT[key] || cnMap[key]
     }
     const cnReverse: Record<string, string> = {}
     const addCnReverse = (zh: string | undefined, en: string) => {
