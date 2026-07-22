@@ -126,6 +126,13 @@ Fetches public currency exchange rates for the optional "equivalent pricing"
 feature.
 ```
 
+**Host permission — https://raw.githubusercontent.com/***
+```
+Fetches the latest Chinese unique-item name dictionary — a public JSON file
+hosted on the maintainer's own GitHub — so translation name updates can ship
+without a new extension release.
+```
+
 ---
 
 ## Data usage declarations (資料用途宣告 — Privacy practices 分頁)

@@ -39,7 +39,7 @@ export default defineConfig({
     version: "3.28.1",
     version_name: "3.28.01",
     description:
-      "Poe Zh Trade Tools Pro enhances the Path of Exile trade site with bookmarks, history and result tools.",
+      "Traditional/Simplified Chinese localization plus bookmarks, history and result tools for the Path of Exile trade site.",
     permissions: ["storage", "tabs", "unlimitedStorage"],
     host_permissions: [
       ...tradeHostPermissions,

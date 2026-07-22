@@ -4,7 +4,7 @@
   "version": "3.28.1",
   "packageManager": "pnpm@11.3.0",
   "license": "MIT",
-  "description": "Poe Zh Trade Tools Pro enhances the Path of Exile trade site with bookmarks, history and result tools.",
+  "description": "Traditional/Simplified Chinese localization plus bookmarks, history and result tools for the Path of Exile trade site.",
   "author": "MooHui Dev",
   "contributors": [
     "KroxiLabs (original Poe Trade Plus)",

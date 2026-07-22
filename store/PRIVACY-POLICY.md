@@ -35,6 +35,8 @@ sources, from within your browser:
   translate the trade site.
 - **poe.ninja** — public currency exchange rates, used for the optional
   "equivalent pricing" feature.
+- **raw.githubusercontent.com** — the maintainer's own public GitHub, to fetch
+  the latest Chinese item-name dictionary.
 
 These requests fetch public game/market data only. No personal data,
 identifiers, or analytics are sent.
