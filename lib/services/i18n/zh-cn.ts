@@ -288,6 +288,7 @@ export const simplifiedChineseTranslations: Record<string, TranslationValue> = {
   "about.version": ({ version }) =>
     `版本 ${version} • 基于 KroxiLabs 的 Poe Trade Plus（MIT 授权）`,
   "about.maintainer": "中文化与整合",
+  "about.dataVersion": "中文化数据版本",
   "bulk.empty":
     "尚未侦测到大宗卖家。请打开同一卖家出现超过一次的交易结果列表。",
   "bulk.price": "价格：",

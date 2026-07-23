@@ -53,7 +53,15 @@ const fetchItems = async (url: string): Promise<TradeItemsResponse> => {
 const REMOTE_DICT_URL =
   "https://raw.githubusercontent.com/MooHuiDev/poe-zh-trade-tools-pro/main/data/unique-names.json"
 
-type RemoteDict = { tw?: Record<string, string>; cn?: Record<string, string> }
+type RemoteDict = {
+  version?: string
+  tw?: Record<string, string>
+  cn?: Record<string, string>
+}
+
+// Bundled fallback for the localization "data version" shown in the About page.
+// The live value comes from the remote JSON so it can update without a release.
+const BUNDLED_DATA_VERSION = "3.28"
 
 const fetchRemoteDict = async (): Promise<RemoteDict | null> => {
   try {
@@ -254,6 +262,7 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
     if (Object.keys(cnMap).length > 0) payload.zhSuppItemMapCn = cnMap
     payload.zhCore_cn_items = cnItems
     payload.zhCn_reverse = cnReverse
+    payload.zhDataVersion = remoteDict?.version || BUNDLED_DATA_VERSION
     await writeStorage(payload)
     console.log(
       `[zh-supp] bilingual tradeitems prepared (${items.length} groups, ` +

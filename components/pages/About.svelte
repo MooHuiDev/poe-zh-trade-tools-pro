@@ -2,6 +2,7 @@
   import Button from "../Button.svelte";
   import { languageStore, translate } from "../../lib/services/i18n";
   import { hasValidExtensionContext } from "../../lib/utilities/extension-context";
+  import { onMount } from "svelte";
 
   let {
     onOpenWhatsNew = () => {},
@@ -12,6 +13,21 @@
   } = $props();
 
   const version = hasValidExtensionContext() ? chrome.runtime.getManifest().version : "dev"
+
+  // Localization "data version" — comes from the remote dictionary JSON, so it
+  // can update without a store release (lets users see the latest league the
+  // unique names cover).
+  let dataVersion = $state<string | null>(null);
+  onMount(() => {
+    try {
+      chrome.storage?.local?.get("zhDataVersion", (r) => {
+        const v = (r as { zhDataVersion?: string })?.zhDataVersion;
+        if (v) dataVersion = String(v);
+      });
+    } catch {
+      // storage unavailable; just omit the data-version line
+    }
+  });
 </script>
 
 <section class="about-page">
@@ -55,6 +71,9 @@
       </a>
     </p>
     <p class="about-footer__meta">{translate($languageStore, "about.version", { version })}</p>
+    {#if dataVersion}
+      <p class="about-footer__meta">{translate($languageStore, "about.dataVersion")} {dataVersion}</p>
+    {/if}
   </footer>
 </section>
 

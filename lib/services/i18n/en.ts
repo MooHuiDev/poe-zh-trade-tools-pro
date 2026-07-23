@@ -316,6 +316,7 @@ export const englishTranslations: Record<string, TranslationValue> = {
   "about.version": ({ version }) =>
     `Version ${version} • Based on Poe Trade Plus by KroxiLabs (MIT)`,
   "about.maintainer": "Localization & integration by",
+  "about.dataVersion": "Localization data",
   "bulk.empty":
     "No bulk sellers detected yet. Open a trade result list where the same seller appears more than once.",
   "bulk.price": "Price:",

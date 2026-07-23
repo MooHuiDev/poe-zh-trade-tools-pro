@@ -1,5 +1,6 @@
 {
-"_note": "Unique-name dictionary fetched at runtime; edit + push to update names without a store release. Keys = normalized English slug.",
+"_note": "Unique-name dictionary fetched at runtime; edit + push to update names without a store release. Keys = normalized English slug. Bump \"version\" when you fill in a new league's uniques.",
+"version": "3.28",
 "tw": {
 "abberathshooves": "艾貝拉斯之蹄",
 "abberathshorn": "艾貝拉斯之角",
