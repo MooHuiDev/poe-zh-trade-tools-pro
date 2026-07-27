@@ -897,7 +897,11 @@ export class ItemResultsService {
     const locale = poedbLocale();
     if (!locale || !experimentalSettings.isPoedbVisible()) return null;
 
-    const header = row.querySelector<HTMLElement>(".item-popup__header--unique");
+    // Uniques AND skill gems both have their own PoeDB pages (poedb.tw/<locale>/
+    // <English name>), so show the button for both.
+    const header = row.querySelector<HTMLElement>(
+      ".item-popup__header--unique, .item-popup__header--gem"
+    );
     const raw = header
       ?.querySelector<HTMLElement>(".item-popup__header-line")
       ?.textContent

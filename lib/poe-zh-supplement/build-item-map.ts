@@ -60,10 +60,28 @@ const REMOTE_DICT_URL =
 const REMOTE_STAT_URL =
   "https://raw.githubusercontent.com/MooHuiDev/poe-zh-trade-tools-pro/main/data/stat-templates.json"
 
+// Skill-gem name dictionary (English -> Traditional / Simplified), sourced from
+// PoeDB. Needed because the Simplified (国服) gem names are DIFFERENT words, not
+// just simplified characters (e.g. Kinetic Bolt = 力量穿引 [TW] but 念动飞箭 [CN]),
+// so OpenCC-converting the Taiwan name is wrong. Keyed by normalized English.
+const REMOTE_GEM_URL =
+  "https://raw.githubusercontent.com/MooHuiDev/poe-zh-trade-tools-pro/main/data/gem-names.json"
+
 type RemoteDict = {
   version?: string
   tw?: Record<string, string>
   cn?: Record<string, string>
+}
+
+const fetchRemoteGems = async (): Promise<RemoteDict | null> => {
+  try {
+    const res = await fetch(REMOTE_GEM_URL, { credentials: "omit", cache: "no-cache" })
+    if (!res.ok) return null
+    const json = (await res.json()) as RemoteDict
+    return json && typeof json === "object" ? json : null
+  } catch {
+    return null
+  }
 }
 
 // Bundled fallback for the localization "data version" shown in the About page.
@@ -115,6 +133,11 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
     const CN_DICT: Record<string, string> = remoteDict?.cn
       ? { ...SUPPLEMENT_ZH_CN, ...remoteDict.cn }
       : SUPPLEMENT_ZH_CN
+
+    // Skill-gem name dictionary (PoeDB): authoritative TW / 国服 gem names.
+    const remoteGems = await fetchRemoteGems()
+    const GEM_TW = remoteGems?.tw ?? {}
+    const GEM_CN = remoteGems?.cn ?? {}
 
     const map: Record<string, string> = {}
 
@@ -340,6 +363,10 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
         `disc-paired ${discPaired} gem variants`
     )
 
+    // Fill any missing TW gem names from the PoeDB gem dictionary (the Taiwan
+    // trade API is authoritative and already wins; this only covers gaps).
+    for (const [k, v] of Object.entries(GEM_TW)) if (v && !map[k]) map[k] = v
+
     // Build a bilingual "中文 (English)" tradeitems result for injection so the
     // item search box and item-based filter dropdowns (map/legacy reward, etc.)
     // are searchable in BOTH languages. The English `type`/`name` are kept
@@ -407,6 +434,9 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
     // Traditional names (bases rarely differ beyond characters).
     const cnMap: Record<string, string> = {}
     for (const [k, v] of Object.entries(map)) cnMap[k] = toSimplified(v)
+    // Override with authentic 国服 gem names (PoeDB): these are DIFFERENT words,
+    // not just simplified characters, so they must replace the OpenCC guess.
+    for (const [k, v] of Object.entries(GEM_CN)) if (v) cnMap[k] = v
     const zhOfCn = (english: string) => {
       const key = normalize(english)
       return (
