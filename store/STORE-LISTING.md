@@ -33,56 +33,52 @@ Companion sidebar for the Path of Exile trade site: bookmarks, history, result t
 
 ---
 
-## Detailed description (English)
+## Detailed description (說明欄 — 貼這整段;中文在上,英文在下)
 ```
-Poe Zh Trade Tools Pro is a companion for the official Path of Exile trade
-website. It adds a sidebar and quality-of-life tools, and can optionally
-translate the trade site into Traditional or Simplified Chinese with search
-that works in both Chinese and English.
-
-Features
-• Bookmarks and folders for your saved trade searches
-• Search history
-• Result tools: Chaos/Divine/Exalted equivalent pricing (via poe.ninja),
-  quick stat / weapon / price filter presets
-• Optional Traditional or Simplified Chinese localization of stat filters,
-  item mods, item names and currencies — search still works in both languages
-• One-click PoeDB link on unique items (Chinese interface)
-• All your data (bookmarks, history, settings) stays on your device
-
-The extension code is based on the open-source Poe Trade Plus by KroxiLabs
-(MIT License). Translation data is third-party content and not under MIT:
-Path of Exile game text is the intellectual property of Grinding Gear Games
-(used here for a community localization tool); some unique-item names
-reference PoEDB (chuanhsing); Simplified Chinese uses OpenCC-derived
-dictionaries (Apache-2.0).
-
-Not affiliated with, authorized, or endorsed by Grinding Gear Games.
-"Path of Exile" is a trademark of Grinding Gear Games.
-```
-
-## Detailed description (中文)
-```
-Poe Zh Trade Tools Pro 是流亡黯道官方交易站的輔助工具。它提供一個側邊欄與多項
-便利功能,並可選擇將整個交易站中文化(繁體或簡體),且中文、英文都能搜尋。
+Poe Zh Trade Tools Pro 是流亡黯道官方交易站的輔助工具。它提供一個側邊欄與多項便利功能,並可選擇將整個交易站中文化(繁體或簡體),且中文、英文都能搜尋。
 
 功能
 • 書籤與資料夾:儲存你的交易搜尋
 • 搜尋歷史
-• 結果工具:混沌石/神聖石/崇高石等值定價(透過 poe.ninja)、快速屬性/武器/價格
-  篩選預設
-• 可選的繁體/簡體中文化:篩選器、詞綴、物品名稱、通貨全部中文化,且中英雙向皆可搜尋
+• 結果工具:混沌石/神聖石/崇高石等值定價(透過 poe.ninja)、快速屬性/武器/價格篩選預設
+• 可選的繁體/簡體中文化:篩選器、詞綴、物品名稱、通貨全部中文化,中英雙向皆可搜尋
 • 傳奇物品一鍵開啟 PoeDB(中文介面時)
+• 支援台服(pathofexile.tw)交易站
 • 所有資料(書籤、歷史、設定)都留在你的裝置本機
 
-擴充程式碼基於 KroxiLabs 的開源專案 Poe Trade Plus(MIT 授權)。翻譯資料為第三方
-內容、不在 MIT 範圍:《Path of Exile》遊戲文本為 Grinding Gear Games 之智慧財產
-(作為玩家社群中文化工具使用);部分傳奇名稱參考 PoEDB(chuanhsing);簡體中文
-使用 OpenCC 衍生字典(Apache-2.0)。
+授權與來源
+擴充程式碼基於 KroxiLabs 的開源專案 Poe Trade Plus(MIT 授權)。翻譯資料為第三方內容、不在 MIT 範圍:《Path of Exile》遊戲文本為 Grinding Gear Games 之智慧財產(作為玩家社群中文化工具使用);部分傳奇名稱參考 PoEDB(chuanhsing);簡體中文使用 OpenCC 衍生字典(Apache-2.0)。
 
-本擴充與 Grinding Gear Games 無關,未獲其授權或背書。
-「Path of Exile」為 Grinding Gear Games 之商標。
+本擴充與 Grinding Gear Games 無關,未獲其授權或背書。「Path of Exile」為 Grinding Gear Games 之商標。
+
+原始碼 / Source code: https://github.com/MooHuiDev/poe-zh-trade-tools-pro
+
+--------------------------------------------------
+
+Poe Zh Trade Tools Pro is a companion for the official Path of Exile trade website. It adds a sidebar and quality-of-life tools, and can optionally translate the trade site into Traditional or Simplified Chinese with search that works in both Chinese and English.
+
+Features
+• Bookmarks and folders for your saved trade searches
+• Search history
+• Result tools: Chaos/Divine/Exalted equivalent pricing (via poe.ninja), quick stat / weapon / price filter presets
+• Optional Traditional or Simplified Chinese localization of stat filters, item mods, item names and currencies — search works in both languages
+• One-click PoeDB link on unique items (Chinese interface)
+• Supports the Garena Taiwan (pathofexile.tw) trade site
+• All your data (bookmarks, history, settings) stays on your device
+
+License & sources
+The extension code is based on the open-source Poe Trade Plus by KroxiLabs (MIT License). Translation data is third-party content and not under MIT: Path of Exile game text is the intellectual property of Grinding Gear Games (used here for a community localization tool); some unique-item names reference PoEDB (chuanhsing); Simplified Chinese uses OpenCC-derived dictionaries (Apache-2.0).
+
+Not affiliated with, authorized, or endorsed by Grinding Gear Games. "Path of Exile" is a trademark of Grinding Gear Games.
+
+Source code: https://github.com/MooHuiDev/poe-zh-trade-tools-pro
 ```
+
+## Homepage URL / Support URL(首頁網址 / 支援網址欄位)
+```
+https://github.com/MooHuiDev/poe-zh-trade-tools-pro
+```
+(問題回報可填 issues 頁:https://github.com/MooHuiDev/poe-zh-trade-tools-pro/issues )
 
 ---
 

@@ -35,7 +35,7 @@
 - 所有資料(書籤、歷史、設定)都留在本機
 
 ### 安裝
-- Chrome 線上應用程式商店:_(上架後補上連結)_
+- Chrome 線上應用程式商店:https://chromewebstore.google.com/detail/poe-zh-trade-tools-pro/olebcconlpeiohdbglmhdggklbajcelc
 - 從原始碼:見下方 **Build**,再到 `chrome://extensions` → 開發者模式 →
   載入未封裝項目,選 `build/chrome-mv3`。
 
@@ -59,7 +59,7 @@ search that works in both Chinese and English.
 - All data (bookmarks, history, settings) stays on your device
 
 ### Install
-- Chrome Web Store: _(link coming once published)_
+- Chrome Web Store: https://chromewebstore.google.com/detail/poe-zh-trade-tools-pro/olebcconlpeiohdbglmhdggklbajcelc
 - From source: see **Build** below, then load `build/chrome-mv3` via
   `chrome://extensions` → Developer mode → Load unpacked.
 
