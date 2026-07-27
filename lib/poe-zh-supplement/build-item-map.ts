@@ -53,6 +53,13 @@ const fetchItems = async (url: string): Promise<TradeItemsResponse> => {
 const REMOTE_DICT_URL =
   "https://raw.githubusercontent.com/MooHuiDev/poe-zh-trade-tools-pro/main/data/unique-names.json"
 
+// Complete mod-template dictionary (English template -> Chinese template), built
+// from the game's stat_descriptions. Lets zh-results translate ANY mod line by
+// matching the rendered English (covers non-filterable unique mods that have no
+// trade stat id). Hosted remotely so it can update per league without a release.
+const REMOTE_STAT_URL =
+  "https://raw.githubusercontent.com/MooHuiDev/poe-zh-trade-tools-pro/main/data/stat-templates.json"
+
 type RemoteDict = {
   version?: string
   tw?: Record<string, string>
@@ -156,10 +163,42 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
       if (pairArrays(usRest, twRest)) matchedSubsets++
     })
 
+    // Derive base-type names from unique items, anchored on the unique dictionary.
+    // Every unique carries its base type in both locales (e.g. "Dread Captain's
+    // Cutlass" → "Ghostflame Blade"; "滅亡海盜彎刀" → "青焰利刃"). Since we already
+    // know the two uniques are the same (via TW_DICT), we can map the base
+    // English→Chinese from their `type` fields. This is robust to the positional
+    // category pairing being skipped on a new league (which leaves new base
+    // types like "Ghostflame Blade" untranslated).
+    const twUniqueTypeByName = new Map<string, string>()
+    for (const cat of twCategories) {
+      for (const e of cat.entries ?? []) {
+        const nm = (e.name || "").trim()
+        const tp = (e.type || "").trim()
+        if (nm && tp && !twUniqueTypeByName.has(nm)) twUniqueTypeByName.set(nm, tp)
+      }
+    }
+    let derivedBases = 0
+    for (const cat of usCategories) {
+      for (const e of cat.entries ?? []) {
+        if (!e.name || !e.type) continue
+        const zhName = TW_DICT[normalize(e.name)]
+        if (!zhName) continue
+        const twType = twUniqueTypeByName.get(zhName)
+        if (!twType || !hasChinese(twType)) continue
+        const key = normalize(e.type)
+        if (key && !map[key]) {
+          map[key] = twType
+          derivedBases++
+        }
+      }
+    }
+
     console.log(
       `[zh-supp] runtime item map (non-unique): ${Object.keys(map).length} entries; ` +
         `subsets matched ${matchedSubsets} ` +
         `(us cats ${usCategories.length}, tw cats ${twCategories.length}); ` +
+        `derived ${derivedBases} base types from uniques; ` +
         `unique names come from the bundled dictionary`
     )
 
@@ -263,6 +302,25 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
     payload.zhCore_cn_items = cnItems
     payload.zhCn_reverse = cnReverse
     payload.zhDataVersion = remoteDict?.version || BUNDLED_DATA_VERSION
+
+    // Fetch the complete mod-template dictionary and store per-language so
+    // zh-results can translate any mod line by matching the rendered English.
+    try {
+      const res = await fetch(REMOTE_STAT_URL, {
+        credentials: "omit",
+        cache: "no-cache"
+      })
+      if (res.ok) {
+        const st = (await res.json()) as {
+          tw?: Record<string, string>
+          cn?: Record<string, string>
+        }
+        if (st?.tw) payload.zhStatTpl_tw = st.tw
+        if (st?.cn) payload.zhStatTpl_cn = st.cn
+      }
+    } catch {
+      // offline / blocked — zh-results falls back to the trade-stat modmap
+    }
     await writeStorage(payload)
     console.log(
       `[zh-supp] bilingual tradeitems prepared (${items.length} groups, ` +

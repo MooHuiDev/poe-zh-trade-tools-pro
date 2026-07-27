@@ -21,6 +21,8 @@ export default defineContentScript({
     if (!state.enabled) return
     const modmapKey =
       state.language === "zh-cn" ? "zhCore_cn_modmap" : "zhCore_modmap"
+    const statTplKey =
+      state.language === "zh-cn" ? "zhStatTpl_cn" : "zhStatTpl_tw"
 
     const hasChinese = (value: string) => /[一-鿿]/.test(value)
     // A signed number, used both to read rendered values and to fill templates.
@@ -31,12 +33,25 @@ export default defineContentScript({
     type ModInfo = { tw: string; us?: string; opt?: Record<string, string> }
     let modMap: Record<string, ModInfo> = {}
 
-    const translateMod = (el: HTMLElement) => {
-      const id = el.getAttribute("data-hash")
-      if (!id) return
-      const info = modMap[id]
-      if (!info || !info.tw) return
+    // Complete mod-template dictionary keyed by normalized English. Lets us
+    // translate ANY mod line (including non-filterable unique mods with no trade
+    // stat id) by matching the rendered English and filling in the numbers.
+    let statTpl: Record<string, string> = {}
+    const normEn = (s: string) =>
+      s
+        .replace(/\[([^\]|]+)(?:\|[^\]]*)?\]/g, "$1") // [English|中文] -> English
+        .replace(/[+\-]?\d+(?:\.\d+)?/g, "#") // numbers -> #
+        .toLowerCase()
+        .replace(/[^a-z#]/g, "")
+    const translateByTemplate = (rendered: string): string | null => {
+      const tpl = statTpl[normEn(rendered)]
+      if (!tpl) return null
+      const values = rendered.match(NUM) || []
+      let i = 0
+      return tpl.replace(PLACEHOLDER, () => (i < values.length ? values[i++] : "#"))
+    }
 
+    const translateMod = (el: HTMLElement) => {
       const field = el.querySelector<HTMLElement>("[data-field]")
       if (!field) return
       const rendered = field.textContent?.trim()
@@ -44,33 +59,37 @@ export default defineContentScript({
 
       let translated = ""
 
-      if (info.opt && info.us && info.us.includes("#")) {
-        // Option-based mod (e.g. "Added Small Passive Skills grant: <sub-stat>").
-        // Isolate the sub-stat that fills # and translate it via the option table.
-        const hashPos = info.us.indexOf("#")
-        const prefix = info.us.slice(0, hashPos)
-        const suffix = info.us.slice(hashPos + 1)
-        if (
-          rendered.startsWith(prefix) &&
-          rendered.endsWith(suffix) &&
-          rendered.length >= prefix.length + suffix.length
-        ) {
-          const fill = rendered
-            .slice(prefix.length, rendered.length - suffix.length)
-            .trim()
-          const twFill = info.opt[fill]
-          if (twFill) translated = info.tw.replace("#", twFill)
+      // 1) Trade-stat-id path (precise; also handles option-based mods).
+      const id = el.getAttribute("data-hash")
+      const info = id ? modMap[id] : undefined
+      if (info && info.tw) {
+        if (info.opt && info.us && info.us.includes("#")) {
+          const hashPos = info.us.indexOf("#")
+          const prefix = info.us.slice(0, hashPos)
+          const suffix = info.us.slice(hashPos + 1)
+          if (
+            rendered.startsWith(prefix) &&
+            rendered.endsWith(suffix) &&
+            rendered.length >= prefix.length + suffix.length
+          ) {
+            const fill = rendered
+              .slice(prefix.length, rendered.length - suffix.length)
+              .trim()
+            const twFill = info.opt[fill]
+            if (twFill) translated = info.tw.replace("#", twFill)
+          }
+        } else {
+          const values = rendered.match(NUM) || []
+          let i = 0
+          translated = info.tw.replace(PLACEHOLDER, () =>
+            i < values.length ? values[i++] : "#"
+          )
         }
-        // If we couldn't resolve the option, leave it English rather than
-        // wrongly stuffing a number into the placeholder.
-        if (!translated) return
-      } else {
-        const values = rendered.match(NUM) || []
-        let i = 0
-        translated = info.tw.replace(PLACEHOLDER, () =>
-          i < values.length ? values[i++] : "#"
-        )
       }
+
+      // 2) Fallback: match the rendered English against the complete template
+      //    dictionary (covers mods with no trade stat id).
+      if (!translated) translated = translateByTemplate(rendered) || ""
 
       if (!translated || translated === rendered) return
       const textSpan = field.querySelector<HTMLElement>("span") || field
@@ -110,7 +129,7 @@ export default defineContentScript({
     }
 
     const translateWithin = (root: ParentNode) => {
-      root.querySelectorAll<HTMLElement>(".item-mod[data-hash]").forEach(translateMod)
+      root.querySelectorAll<HTMLElement>(".item-mod").forEach(translateMod)
       root.querySelectorAll<HTMLElement>(NOTABLE_SPAN).forEach(translateNotable)
     }
 
@@ -125,14 +144,23 @@ export default defineContentScript({
       }
     }
 
+    const applyStatTpl = (v: unknown) => {
+      if (v && typeof v === "object") {
+        statTpl = v as Record<string, string>
+        runFullPass()
+      }
+    }
+
     try {
-      chrome.storage.local.get([modmapKey], (data) =>
-        applyMap((data as Record<string, unknown>)?.[modmapKey])
-      )
+      chrome.storage.local.get([modmapKey, statTplKey], (data) => {
+        const d = data as Record<string, unknown>
+        applyStatTpl(d?.[statTplKey])
+        applyMap(d?.[modmapKey])
+      })
       chrome.storage.onChanged?.addListener((changes, area) => {
-        if (area === "local" && changes[modmapKey]) {
-          applyMap(changes[modmapKey].newValue)
-        }
+        if (area !== "local") return
+        if (changes[statTplKey]) applyStatTpl(changes[statTplKey].newValue)
+        if (changes[modmapKey]) applyMap(changes[modmapKey].newValue)
       })
     } catch {
       // chrome.storage unavailable — nothing to translate.
@@ -147,7 +175,7 @@ export default defineContentScript({
       const batch = queued
       queued = []
       for (const node of batch) {
-        if (node.matches?.(".item-mod[data-hash]")) translateMod(node)
+        if (node.matches?.(".item-mod")) translateMod(node)
         if (node.matches?.(NOTABLE_SPAN)) translateNotable(node)
         translateWithin(node)
       }
