@@ -50,3 +50,9 @@ keys.json
 
 # local scratch / docs artifacts
 tmp_video_frames/
+
+# local maintainer notes — never published (kept out of the public repo)
+*.local.md
+
+# internal store copy sheet — keep private (PRIVACY-POLICY.md stays public)
+store/STORE-LISTING.md
