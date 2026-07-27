@@ -50,50 +50,87 @@ export default defineContentScript({
       let i = 0
       return tpl.replace(PLACEHOLDER, () => (i < values.length ? values[i++] : "#"))
     }
+    // Resolve the game's "[English|中文]" inline keyword syntax that some trade
+    // templates carry, so no raw brackets leak into the result.
+    const resolveKw = (s: string) =>
+      s
+        .replace(/\[[^\]|]+\|([^\]]*)\]/g, "$1")
+        .replace(/\[([^\]]*)\]/g, "$1")
 
     const translateMod = (el: HTMLElement) => {
       const field = el.querySelector<HTMLElement>("[data-field]")
       if (!field) return
-      const rendered = field.textContent?.trim()
-      if (!rendered || hasChinese(rendered)) return
 
-      let translated = ""
+      // Each mod line renders as its own <span> inside [data-field] (multi-line
+      // mods have several). Translate each line-span independently.
+      const spans = Array.from(
+        field.querySelectorAll<HTMLElement>(":scope > span")
+      )
+      const lineSpans = spans.length ? spans : [field]
 
-      // 1) Trade-stat-id path (precise; also handles option-based mods).
+      // Pass 1: the complete template dictionary (clean, comprehensive — covers
+      // multi-line, non-filterable, and option mods whose rendered text already
+      // has the option filled in).
+      const remaining: HTMLElement[] = []
+      for (const span of lineSpans) {
+        const rendered = span.textContent?.trim()
+        if (!rendered || hasChinese(rendered)) continue
+        const t = translateByTemplate(rendered)
+        if (t && t !== rendered) span.textContent = t
+        else remaining.push(span)
+      }
+      if (!remaining.length) return
+
+      // Pass 2: trade-stat fallback (from pathofexile.tw) for lines the
+      // dictionary missed. Resolve any "[English|中文]" syntax it carries.
       const id = el.getAttribute("data-hash")
       const info = id ? modMap[id] : undefined
-      if (info && info.tw) {
-        if (info.opt && info.us && info.us.includes("#")) {
-          const hashPos = info.us.indexOf("#")
-          const prefix = info.us.slice(0, hashPos)
-          const suffix = info.us.slice(hashPos + 1)
-          if (
-            rendered.startsWith(prefix) &&
-            rendered.endsWith(suffix) &&
-            rendered.length >= prefix.length + suffix.length
-          ) {
-            const fill = rendered
-              .slice(prefix.length, rendered.length - suffix.length)
-              .trim()
-            const twFill = info.opt[fill]
-            if (twFill) translated = info.tw.replace("#", twFill)
+      if (!info || !info.tw) return
+
+      // Option-based mods (cluster jewel "grants: <sub-stat>"): only when nothing
+      // was translated yet, so we don't mix into a partially-translated line.
+      if (
+        info.opt &&
+        info.us &&
+        info.us.includes("#") &&
+        remaining.length === lineSpans.length
+      ) {
+        const rendered = field.textContent?.trim()
+        if (!rendered || hasChinese(rendered)) return
+        const hashPos = info.us.indexOf("#")
+        const prefix = info.us.slice(0, hashPos)
+        const suffix = info.us.slice(hashPos + 1)
+        if (
+          rendered.startsWith(prefix) &&
+          rendered.endsWith(suffix) &&
+          rendered.length >= prefix.length + suffix.length
+        ) {
+          const fill = rendered
+            .slice(prefix.length, rendered.length - suffix.length)
+            .trim()
+          const twFill = info.opt[fill]
+          if (twFill) {
+            const span = field.querySelector<HTMLElement>("span") || field
+            span.textContent = resolveKw(info.tw.replace("#", twFill))
           }
-        } else {
-          const values = rendered.match(NUM) || []
-          let i = 0
-          translated = info.tw.replace(PLACEHOLDER, () =>
-            i < values.length ? values[i++] : "#"
-          )
         }
+        return
       }
 
-      // 2) Fallback: match the rendered English against the complete template
-      //    dictionary (covers mods with no trade stat id).
-      if (!translated) translated = translateByTemplate(rendered) || ""
-
-      if (!translated || translated === rendered) return
-      const textSpan = field.querySelector<HTMLElement>("span") || field
-      textSpan.textContent = translated
+      // Single-line numeric fallback.
+      if (remaining.length === 1 && !info.tw.includes("\n")) {
+        const span = remaining[0]
+        const rendered = span.textContent?.trim()
+        if (!rendered || hasChinese(rendered)) return
+        const values = rendered.match(NUM) || []
+        let i = 0
+        const translated = resolveKw(
+          info.tw.replace(PLACEHOLDER, () =>
+            i < values.length ? values[i++] : "#"
+          )
+        )
+        if (translated && translated !== rendered) span.textContent = translated
+      }
     }
 
     // Cluster-jewel / anointed notable blocks render as:

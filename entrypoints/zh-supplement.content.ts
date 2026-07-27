@@ -88,6 +88,13 @@ export default defineContentScript({
       const inOption = node.parentElement?.closest(
         ".multiselect__option, .multiselect__single"
       )
+      // If the option is ALREADY bilingual (our injected item text contains
+      // Chinese), vue-multiselect can split it into several fragments for search
+      // highlighting; translating each English fragment on its own garbles the
+      // text (e.g. "Vaal Lightning Strike (Lightning Strike of Arcing)" turning
+      // into repeated, nested pieces). Skip when the whole option already has
+      // Chinese — it is translated and just visually split.
+      if (inOption && hasChinese(inOption.textContent || "")) return
       const replacement = inOption ? `${zh} (${trimmed})` : zh
       node.nodeValue = raw.replace(trimmed, replacement)
     }
@@ -264,6 +271,12 @@ export default defineContentScript({
         ) {
           return
         }
+        // The main item-search box already has bilingual "中文 (English)" options,
+        // so typing Chinese matches directly — no reverse-translation needed. Only
+        // the pure-English filter dropdowns need reverse. Detected by the
+        // "Search Items"/"搜尋"/"搜索"/"物品" placeholder.
+        const ph = (target.placeholder || "").toLowerCase()
+        if (/search|搜尋|搜索|物品|道具/.test(ph)) return
         // Poe Zh Trade Tools Pro may auto-prepend a regex prefix (~) to search inputs, so
         // strip a leading ~/-/space before looking up the Chinese name, then put
         // that prefix back in front of the English so search still works.

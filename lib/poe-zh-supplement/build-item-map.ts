@@ -143,6 +143,54 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
       return true
     }
 
+    // Anchor-aligned pairing (robust to count mismatch). Uses entries whose
+    // English we already know a Chinese for (bundled dict or a value already in
+    // `map`) as anchors, matches them to the same Chinese in the TW list, then
+    // pairs the gap-free EQUAL-length segments between consecutive anchors by
+    // index. A segment whose lengths differ (an inserted/removed entry) is just
+    // skipped, so one discrepancy never poisons the rest of the category.
+    const anchorPairEntries = (U: TradeEntry[], T: TradeEntry[]) => {
+      if (!U.length || !T.length) return
+      const knownZh = (en: string) => TW_DICT[normalize(en)] || map[normalize(en)]
+      const usedT = new Array(T.length).fill(false)
+      const anchors: Array<{ i: number; j: number }> = []
+      let start = 0
+      for (let i = 0; i < U.length; i++) {
+        const en = fieldOf(U[i])
+        if (!en || hasChinese(en)) continue
+        const zh = knownZh(en)
+        if (!zh) continue
+        for (let k = start; k < T.length; k++) {
+          if (!usedT[k] && fieldOf(T[k]) === zh) {
+            anchors.push({ i, j: k })
+            usedT[k] = true
+            start = k + 1
+            break
+          }
+        }
+      }
+      if (!anchors.length) return
+      const segs: Array<[number, number, number, number]> = []
+      let prev = { i: -1, j: -1 }
+      for (const a of anchors) {
+        segs.push([prev.i + 1, a.i - 1, prev.j + 1, a.j - 1])
+        prev = a
+      }
+      segs.push([prev.i + 1, U.length - 1, prev.j + 1, T.length - 1])
+      for (const [ui0, ui1, tj0, tj1] of segs) {
+        const uc = ui1 - ui0 + 1
+        const tc = tj1 - tj0 + 1
+        if (uc <= 0 || uc !== tc) continue
+        for (let d = 0; d < uc; d++) {
+          const en = fieldOf(U[ui0 + d])
+          const zh = fieldOf(T[tj0 + d])
+          if (!en || !zh || hasChinese(en) || !hasChinese(zh)) continue
+          const key = normalize(en)
+          if (key && !map[key]) map[key] = zh
+        }
+      }
+    }
+
     let matchedSubsets = 0
 
     usCategories.forEach((usCat, index) => {
@@ -161,6 +209,63 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
       const usRest = usEntries.filter((entry) => !entry.name)
       const twRest = twEntries.filter((entry) => !entry.name)
       if (pairArrays(usRest, twRest)) matchedSubsets++
+      // Robust fallback: the items API returns slightly inconsistent snapshots,
+      // so a transient count diff makes the strict pairArrays above skip a whole
+      // category (e.g. gems), leaving base gems like "Anger"/"Winter Orb"
+      // untranslated. The US and TW lists ARE in the same language-independent
+      // order, so anchor-align them on entries we already know (bundled dict /
+      // already-paired) and pair the gap-free equal segments between anchors.
+      anchorPairEntries(usRest, twRest)
+    })
+
+    // Auto-derive unique names missing from the dictionary by anchor-aligning the
+    // international (English) and Garena TW (Chinese) unique lists per category.
+    // Known names (from the dict) are anchors; the gap-free segments between them
+    // are paired index-by-index. This fills new-league uniques straight from the
+    // (complete) TW trade data, so we don't depend on poedb list-page completeness.
+    const derivedUnique: Record<string, string> = {}
+    usCategories.forEach((usCat, index) => {
+      const twCat = twByKey.get(categoryKey(usCat, index)) ?? twCategories[index]
+      if (!twCat) return
+      const U = (usCat.entries ?? []).filter((e) => e.name)
+      const T = (twCat.entries ?? []).filter(
+        (e) => e.name && hasChinese(e.name)
+      )
+      if (!U.length || !T.length) return
+      const usedT = new Array(T.length).fill(false)
+      const anchors: Array<{ i: number; j: number }> = []
+      let start = 0
+      for (let i = 0; i < U.length; i++) {
+        const zh = TW_DICT[normalize(U[i].name || "")]
+        if (!zh) continue
+        for (let k = start; k < T.length; k++) {
+          if (!usedT[k] && (T[k].name || "").trim() === zh) {
+            anchors.push({ i, j: k })
+            usedT[k] = true
+            start = k + 1
+            break
+          }
+        }
+      }
+      const segs: Array<[number, number, number, number]> = []
+      let prev = { i: -1, j: -1 }
+      for (const a of anchors) {
+        segs.push([prev.i + 1, a.i - 1, prev.j + 1, a.j - 1])
+        prev = a
+      }
+      segs.push([prev.i + 1, U.length - 1, prev.j + 1, T.length - 1])
+      for (const [ui0, ui1, tj0, tj1] of segs) {
+        const uc = ui1 - ui0 + 1
+        const tc = tj1 - tj0 + 1
+        if (uc <= 0 || uc !== tc) continue // only pair gap-free equal segments
+        for (let d = 0; d < uc; d++) {
+          const eng = (U[ui0 + d].name || "").trim()
+          const zh = (T[tj0 + d].name || "").trim()
+          if (!eng || !zh || hasChinese(eng) || !hasChinese(zh)) continue
+          const key = normalize(eng)
+          if (key && !TW_DICT[key] && !derivedUnique[key]) derivedUnique[key] = zh
+        }
+      }
     })
 
     // Derive base-type names from unique items, anchored on the unique dictionary.
@@ -182,7 +287,8 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
     for (const cat of usCategories) {
       for (const e of cat.entries ?? []) {
         if (!e.name || !e.type) continue
-        const zhName = TW_DICT[normalize(e.name)]
+        const zhName =
+          TW_DICT[normalize(e.name)] || derivedUnique[normalize(e.name)]
         if (!zhName) continue
         const twType = twUniqueTypeByName.get(zhName)
         if (!twType || !hasChinese(twType)) continue
@@ -194,12 +300,44 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
       }
     }
 
+    // Transfigured / alternate gems (and any other `disc`-keyed variants) share
+    // the same base `type` and differ only by `disc` (alt_x, alt_y, ...), which
+    // is LANGUAGE-INDEPENDENT; `text` is the display name (e.g. "Eye of Winter of
+    // Transience"). Plain index-pairing garbles these because the international
+    // and Garena TW lists order the variants differently — "Eye of Winter of
+    // Transience" ends up mapped to an unrelated gem. Pair them precisely by
+    // (translated base type + disc) instead, and OVERWRITE any wrong value.
+    const twTextByTypeDisc = new Map<string, string>()
+    for (const cat of twCategories) {
+      for (const e of cat.entries ?? []) {
+        if (e.disc && e.type && e.text) {
+          twTextByTypeDisc.set(`${e.type.trim()} ${e.disc}`, e.text.trim())
+        }
+      }
+    }
+    let discPaired = 0
+    for (const cat of usCategories) {
+      for (const e of cat.entries ?? []) {
+        if (!e.disc || !e.type || !e.text) continue
+        const zhBase = map[normalize(e.type)] // translated base gem name
+        if (!zhBase) continue
+        const zhText = twTextByTypeDisc.get(`${zhBase} ${e.disc}`)
+        if (!zhText || !hasChinese(zhText)) continue
+        const key = normalize(e.text)
+        if (key) {
+          map[key] = zhText // overwrite any mis-aligned index pairing
+          discPaired++
+        }
+      }
+    }
+
     console.log(
       `[zh-supp] runtime item map (non-unique): ${Object.keys(map).length} entries; ` +
         `subsets matched ${matchedSubsets} ` +
         `(us cats ${usCategories.length}, tw cats ${twCategories.length}); ` +
-        `derived ${derivedBases} base types from uniques; ` +
-        `unique names come from the bundled dictionary`
+        `derived ${derivedBases} base types + ` +
+        `${Object.keys(derivedUnique).length} unique names from TW alignment; ` +
+        `disc-paired ${discPaired} gem variants`
     )
 
     // Build a bilingual "中文 (English)" tradeitems result for injection so the
@@ -209,7 +347,7 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
     // `text` becomes bilingual.
     const zhOf = (english: string) => {
       const key = normalize(english)
-      return TW_DICT[key] || map[key]
+      return TW_DICT[key] || derivedUnique[key] || map[key]
     }
     // reverse: Chinese display -> English text, so typing a Chinese item name in
     // a vue-multiselect search box (whose internal options are English) can be
@@ -223,7 +361,20 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
       ...cat,
       entries: (cat.entries ?? []).map((e) => {
         const en = (e.text || "").trim()
-        if (!en || hasChinese(en)) return e
+        // Base entries (gems, base types) carry only a `type`, no `text`, so the
+        // original text-only path skipped them and they stayed English. Give them
+        // a bilingual display `text` from the paired map (the site still sends the
+        // English `type` to the API).
+        if (!en) {
+          if (e.name) return e
+          const baseEn = (e.type || "").trim()
+          if (!baseEn || hasChinese(baseEn)) return e
+          const zhBase = map[normalize(baseEn)]
+          if (!zhBase) return e
+          addReverse(zhBase, baseEn)
+          return { ...e, text: `${zhBase} (${baseEn})` }
+        }
+        if (hasChinese(en)) return e
         let zh: string | undefined
         if (e.name) {
           const zhName = zhOf(e.name)
@@ -258,7 +409,11 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
     for (const [k, v] of Object.entries(map)) cnMap[k] = toSimplified(v)
     const zhOfCn = (english: string) => {
       const key = normalize(english)
-      return CN_DICT[key] || cnMap[key]
+      return (
+        CN_DICT[key] ||
+        (derivedUnique[key] ? toSimplified(derivedUnique[key]) : undefined) ||
+        cnMap[key]
+      )
     }
     const cnReverse: Record<string, string> = {}
     const addCnReverse = (zh: string | undefined, en: string) => {
@@ -268,7 +423,16 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
       ...cat,
       entries: (cat.entries ?? []).map((e) => {
         const en = (e.text || "").trim()
-        if (!en || hasChinese(en)) return e
+        if (!en) {
+          if (e.name) return e
+          const baseEn = (e.type || "").trim()
+          if (!baseEn || hasChinese(baseEn)) return e
+          const zhBase = cnMap[normalize(baseEn)]
+          if (!zhBase) return e
+          addCnReverse(zhBase, baseEn)
+          return { ...e, text: `${zhBase} (${baseEn})` }
+        }
+        if (hasChinese(en)) return e
         let zh: string | undefined
         if (e.name) {
           const zhName = zhOfCn(e.name)
@@ -303,29 +467,38 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
     payload.zhCn_reverse = cnReverse
     payload.zhDataVersion = remoteDict?.version || BUNDLED_DATA_VERSION
 
-    // Fetch the complete mod-template dictionary and store per-language so
-    // zh-results can translate any mod line by matching the rendered English.
-    try {
-      const res = await fetch(REMOTE_STAT_URL, {
-        credentials: "omit",
-        cache: "no-cache"
-      })
-      if (res.ok) {
-        const st = (await res.json()) as {
-          tw?: Record<string, string>
-          cn?: Record<string, string>
-        }
-        if (st?.tw) payload.zhStatTpl_tw = st.tw
-        if (st?.cn) payload.zhStatTpl_cn = st.cn
-      }
-    } catch {
-      // offline / blocked — zh-results falls back to the trade-stat modmap
-    }
     await writeStorage(payload)
     console.log(
       `[zh-supp] bilingual tradeitems prepared (${items.length} groups, ` +
         `${Object.keys(reverse).length} reverse entries)`
     )
+
+    // Complete mod-template dictionary (English -> Chinese templates). Fetched
+    // and stored SEPARATELY (it is large, ~3MB) so it does not bloat the main
+    // write and so we can log success/failure clearly.
+    try {
+      const res = await fetch(REMOTE_STAT_URL, {
+        credentials: "omit",
+        cache: "no-cache"
+      })
+      if (!res.ok) {
+        console.warn("[zh-supp] stat templates HTTP", res.status)
+      } else {
+        const st = (await res.json()) as {
+          tw?: Record<string, string>
+          cn?: Record<string, string>
+        }
+        const twTpl = st?.tw || {}
+        const cnTpl = st?.cn || {}
+        await writeStorage({ zhStatTpl_tw: twTpl, zhStatTpl_cn: cnTpl })
+        console.log(
+          `[zh-supp] stat templates stored: tw ${Object.keys(twTpl).length}, ` +
+            `cn ${Object.keys(cnTpl).length}`
+        )
+      }
+    } catch (e) {
+      console.error("[zh-supp] stat templates fetch failed", e)
+    }
   } catch (error) {
     console.error("[zh-supp] failed to build item map", error)
   }
