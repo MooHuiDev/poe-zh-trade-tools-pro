@@ -9,7 +9,13 @@
   import { settings } from "~lib/services/settings"
   import SvgIcon from "~components/SvgIcon.svelte"
 
-  const tradeLinks = [
+  const tradeLinks: Array<{
+    href: string
+    logo: string
+    logoAltKey: string
+    labelKey?: string
+    label?: string
+  }> = [
     {
       href: "https://www.pathofexile.com/trade/search",
       logo: poe1Logo,
@@ -21,6 +27,20 @@
       logo: poe2Logo,
       logoAltKey: "popup.trade2Alt",
       labelKey: "popup.trade2"
+    },
+    {
+      // Garena Taiwan POE1 trade (already in Chinese).
+      href: "https://pathofexile.tw/trade/search",
+      logo: poe1Logo,
+      logoAltKey: "popup.trade1Alt",
+      label: "POE 1 交易 台服"
+    },
+    {
+      // Garena Taiwan POE2 trade.
+      href: "https://pathofexile.tw/trade2/",
+      logo: poe2Logo,
+      logoAltKey: "popup.trade2Alt",
+      label: "POE 2 交易 台服"
     }
   ]
 
@@ -140,7 +160,7 @@
         <span class="trade-link__logo-wrap">
           <img class="trade-link__logo" src={link.logo} alt={translate($languageStore, link.logoAltKey)} />
         </span>
-        <span class="trade-link__label">{translate($languageStore, link.labelKey)}</span>
+        <span class="trade-link__label">{link.label ?? translate($languageStore, link.labelKey ?? "")}</span>
       </a>
     {/each}
   </div>
@@ -237,11 +257,14 @@
 
   .trade-grid {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
   }
 
   .trade-link {
-    flex: 1 1 0;
+    flex: 1 1 calc(50% - 4px);
+    min-width: 0;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     align-items: center;

@@ -11,6 +11,7 @@ import {
   isExtensionContextInvalidatedError
 } from "../utilities/extension-context"
 import { uniqueId } from "../utilities/unique-id"
+import { getTradeRealm } from "../config/trade-hosts"
 import { getActiveTradeTab } from "./active-trade-tab"
 import { languageStore, translate } from "./i18n"
 import { searchPanelService } from "./search-panel"
@@ -21,7 +22,7 @@ const HISTORY_KEY = "trade-history"
 const MAX_HISTORY = 50
 const TRADE_REALMS = ["xbox", "sony", "poe2"]
 const TRADE_HOSTNAME_PATTERN =
-  /(?:^|\.)pathofexile\.com$|^poe2\.kakaogames\.com$/i
+  /(?:^|\.)pathofexile\.(?:com|tw)$|^poe2\.kakaogames\.com$/i
 
 const safeDecodeURIComponent = (value: string | undefined) => {
   if (!value) return value
@@ -96,6 +97,13 @@ export class TradeLocationService {
     this.pollingTimer = setInterval(() => {
       this.syncCurrentLocation()
     }, interval)
+
+    // The polling loop only records history when the location CHANGES, so the
+    // search the user is already viewing when the sidebar mounts would never be
+    // captured (most visible on a fresh realm like Garena TW, where the history
+    // starts empty). Record the current search once up front — maybeLogHistory
+    // de-duplicates and ignores non-search pages, so this is safe to call.
+    void this.maybeLogHistory(this.parseCurrentPath())
 
     // Also listen for focus/blur to pause/resume
     if (!this.focusHandler) {
@@ -403,7 +411,11 @@ export class TradeLocationService {
   }
 
   private getHistoryStorageKey(version: TradeSiteVersion) {
-    return `${HISTORY_KEY}-poe${version}`
+    // Realm-scope the history so Garena TW searches never mix with the
+    // international ones (their urls differ). International keeps the original
+    // key for backward compatibility; TW gets a "-tw" suffix.
+    const realm = getTradeRealm()
+    return `${HISTORY_KEY}-poe${version}${realm === "tw" ? "-tw" : ""}`
   }
 
   private parseUrl(urlString: string | null): ExactTradeLocationStruct {

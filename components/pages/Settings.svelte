@@ -14,6 +14,7 @@
   import { itemResultsService } from "../../lib/services/item-results";
   import { DEFAULT_SIDEBAR_WIDTH, settings, type BookmarkLayout, type BookmarkTradeActionId, type QuickFiltersPlacement, type SidebarSide, type TextSizePreference } from "../../lib/services/settings";
   import { tradeLocationService } from "../../lib/services/trade-location";
+  import { isNativeChineseTradeSite, isPoe2TradeSite } from "../../lib/config/trade-hosts";
   import type { BookmarksTradeStruct } from "../../lib/types/bookmarks";
   import Button from "../Button.svelte";
   import SvgIcon from "../SvgIcon.svelte";
@@ -43,6 +44,13 @@
   }
 
   let { tutorialStep = null }: Props = $props();
+
+  // On the Garena Taiwan site the page is already in Chinese and poe.ninja has no
+  // data, so the localization and equivalent-pricing settings are hidden there.
+  const isNativeCn = isNativeChineseTradeSite();
+  // POE2 trade uses different data; our localization is POE1-only, so the
+  // "translate the market" toggle is hidden there.
+  const isPoe2 = isPoe2TradeSite();
 
   type SettingsTab = "interface" | "sidebar" | "results" | "bookmarks";
   let activeTab = $state<SettingsTab>("interface");
@@ -82,6 +90,8 @@
     }
   };
   const languages: Array<{ code: AppLanguage; label: string; flag: string; emoji: string }> = [
+    { code: "zh-tw", label: "繁體中文", flag: flagTW, emoji: "🇹🇼" },
+    { code: "zh-cn", label: "简体中文", flag: flagCN, emoji: "🇨🇳" },
     { code: "en", label: "English", flag: flagGB, emoji: "🇬🇧" },
     { code: "es", label: "Español", flag: flagES, emoji: "🇪🇸" },
     { code: "pt", label: "Português", flag: flagBR, emoji: "🇧🇷" },
@@ -90,9 +100,7 @@
     { code: "de", label: "Deutsch", flag: flagDE, emoji: "🇩🇪" },
     { code: "fr", label: "Français", flag: flagFR, emoji: "🇫🇷" },
     { code: "ja", label: "日本語", flag: flagJP, emoji: "🇯🇵" },
-    { code: "ko", label: "한국어", flag: flagKR, emoji: "🇰🇷" },
-    { code: "zh-tw", label: "繁體中文", flag: flagTW, emoji: "🇹🇼" },
-    { code: "zh-cn", label: "简体中文", flag: flagCN, emoji: "🇨🇳" }
+    { code: "ko", label: "한국어", flag: flagKR, emoji: "🇰🇷" }
   ];
   const textSizeOptions: Array<{ id: TextSizePreference; labelKey: string }> = [
     { id: "small", labelKey: "settings.textSizeSmall" },
@@ -488,7 +496,7 @@
       </div>
       </section>
 
-      {#if $settings.language === "zh-tw" || $settings.language === "zh-cn"}
+      {#if ($settings.language === "zh-tw" || $settings.language === "zh-cn") && !isNativeCn && !isPoe2}
       <section class="settings-section settings-section--wide">
         <div class="section-heading">
           <h3 class="section-title">{translate($languageStore, "settings.tradeTranslationTitle")}</h3>
@@ -809,6 +817,7 @@
         <h3 class="section-title">{translate($languageStore, "settings.resultsTitle")}</h3>
       </div>
       <div class="settings-row-list">
+        {#if !isNativeCn}
         <div class="settings-row" data-tutorial="settings-equivalent">
           <div class="settings-row__copy">
             <div class="settings-row__title">{translate($languageStore, "settings.equivalentTitle")}</div>
@@ -837,6 +846,7 @@
             onToggle={() => handleEquivalentPricingChange(!$settings.showEquivalentPricing)}
           />
         </div>
+        {/if}
 
         <div class="settings-row">
           <div class="settings-row__copy">

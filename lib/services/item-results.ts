@@ -1,4 +1,5 @@
 import { poeNinjaService, type PoeNinjaCurrencyData } from "./poe-ninja";
+import { isNativeChineseTradeSite } from "../config/trade-hosts";
 import { tradeLocationService } from "./trade-location";
 import { searchPanelService } from "./search-panel";
 import { settings } from "./settings";
@@ -467,6 +468,14 @@ export class ItemResultsService {
 
   private async fetchRatios(forceFresh = false) {
     const { league, type, slug, version } = tradeLocationService.current;
+
+    // The Garena Taiwan site has its own economy that poe.ninja does not cover,
+    // so disable poe.ninja pricing there entirely.
+    if (isNativeChineseTradeSite()) {
+      this.currencyData = null;
+      emitPageDebug("poe-ninja-skip", { reason: "native-chinese-site" });
+      return;
+    }
 
     if (!league) {
       this.currencyData = null;

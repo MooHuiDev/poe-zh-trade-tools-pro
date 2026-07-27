@@ -381,13 +381,6 @@ import About from "./pages/About.svelte";
       </div>
       <button
         type="button"
-        class="version-notice__open"
-        onclick={openWhatsNew}
-      >
-        {translate($languageStore, "layout.versionNoticeOpen")}
-      </button>
-      <button
-        type="button"
         class="version-notice__close"
         aria-label={translate($languageStore, "layout.versionNoticeClose")}
         onclick={dismissVersionNotice}

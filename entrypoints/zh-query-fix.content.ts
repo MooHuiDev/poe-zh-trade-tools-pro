@@ -1,4 +1,7 @@
-import { tradeHosts } from "~/lib/config/trade-hosts"
+import {
+  tradeHosts,
+  isNativeChineseTradeSite
+} from "~/lib/config/trade-hosts"
 
 /**
  * Outgoing trade-query normalizer (MAIN world).
@@ -25,6 +28,9 @@ export default defineContentScript({
   runAt: "document_start",
 
   main() {
+    // The Garena Taiwan site's own data is authoritative there; no rewrite needed.
+    if (isNativeChineseTradeSite()) return
+
     const FLAT = /^(.+)\|(\d+)$/ // "<stat id>|<option>"
     const isTradeQuery = (url: string) =>
       /\/api\/trade\d?\/(search|exchange)\b/.test(url)

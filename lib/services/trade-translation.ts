@@ -12,6 +12,11 @@
  * wrapped as { value, expiresAt } under the lowercased key "app-settings".
  */
 
+import {
+  isNativeChineseTradeSite,
+  isPoe2TradeSite
+} from "~/lib/config/trade-hosts"
+
 export const TRADE_TRANSLATION_LANGS = new Set(["zh-tw", "zh-cn"])
 
 const APP_SETTINGS_KEY = "app-settings"
@@ -40,7 +45,11 @@ export const getTradeTranslationState =
   async (): Promise<TradeTranslationState> => {
     const settings = await readAppSettings()
     const language = String(settings.language ?? "en")
+    // Never inject on the Garena Taiwan site (already Chinese) or on POE2 (our
+    // localization data is POE1-only), regardless of the user's settings.
     const enabled =
+      !isNativeChineseTradeSite() &&
+      !isPoe2TradeSite() &&
       TRADE_TRANSLATION_LANGS.has(language) &&
       settings.translateTradeSite === true
     return { language, enabled }

@@ -7,6 +7,7 @@ import type {
   BookmarksTradeStruct,
   PartialBookmarksTradeLocation
 } from "../types/bookmarks"
+import type { TradeRealm } from "../config/trade-hosts"
 import type { TradeSiteVersion } from "../types/trade-location"
 import { decodeBase64Utf8, encodeBase64Utf8 } from "../utilities/base64"
 import { uniqueId } from "../utilities/unique-id"
@@ -415,12 +416,14 @@ export class BookmarksService {
   async moveFolder(
     folderId: string,
     newIndex: number,
-    options: { version: TradeSiteVersion; archived: boolean }
+    options: { version: TradeSiteVersion; realm?: TradeRealm; archived: boolean }
   ) {
     const folders = await this.fetchFolders()
     const matchingFolders = folders.filter(
       (folder) =>
         folder.version === options.version &&
+        (options.realm === undefined ||
+          (folder.realm ?? "intl") === options.realm) &&
         !!folder.archivedAt === options.archived
     )
     const currentIndex = matchingFolders.findIndex(

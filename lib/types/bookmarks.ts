@@ -1,3 +1,4 @@
+import type { TradeRealm } from "../config/trade-hosts"
 import type { TradeSiteVersion } from "./trade-location"
 
 export interface BookmarksTradeLocation {
@@ -31,6 +32,9 @@ export interface BookmarksFolderStruct {
   id?: string
   title: string
   version: TradeSiteVersion
+  // Which server this folder belongs to. Absent on folders created before realm
+  // scoping existed — those are treated as international ("intl").
+  realm?: TradeRealm
   icon: BookmarksFolderIcon | null
   archivedAt: string | null
   categories?: BookmarksCategoryStruct[]

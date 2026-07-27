@@ -10,6 +10,7 @@
   import { languageStore, translate } from "../../lib/services/i18n";
   import { bookmarksService } from "../../lib/services/bookmarks";
   import { tradeLocationService } from "../../lib/services/trade-location";
+  import { getTradeRealm } from "../../lib/config/trade-hosts";
   import { flashMessages } from "../../lib/services/flash";
   import { storageService } from "../../lib/services/storage";
   import type { BookmarksFolderStruct } from "../../lib/types/bookmarks";
@@ -120,6 +121,7 @@
       title: translate($languageStore, "bookmarks.newFolder"),
       icon: null,
       version: currentVersion,
+      realm: currentRealm,
       archivedAt: null
     };
     const folderId = await bookmarksService.persistFolder(newFolder);
@@ -185,6 +187,7 @@
 
     await bookmarksService.moveFolder(draggedFolderId, targetIndex, {
       version: currentVersion,
+      realm: currentRealm,
       archived: showArchived
     });
 
@@ -301,8 +304,14 @@
   });
   const currentLocation = tradeLocationService.locationStore;
   let currentVersion = $derived($currentLocation.version);
+  // Realm of the site the panel is rendered on (Garena TW vs international). The
+  // in-page sidebar reads it from the live page; folders without a realm are
+  // legacy international ones.
+  const currentRealm = getTradeRealm();
   let versionFolders = $derived($bookmarksService.filter(
-    (folder) => folder.version === currentVersion
+    (folder) =>
+      folder.version === currentVersion &&
+      (folder.realm ?? "intl") === currentRealm
   ));
   let displayedFolders = $derived(versionFolders.filter(
     (folder) => !!folder.archivedAt === showArchived

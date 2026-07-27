@@ -50,8 +50,12 @@ Features
 • One-click PoeDB link on unique items (Chinese interface)
 • All your data (bookmarks, history, settings) stays on your device
 
-This project is based on the open-source Poe Trade Plus by KroxiLabs
-(MIT License).
+The extension code is based on the open-source Poe Trade Plus by KroxiLabs
+(MIT License). Translation data is third-party content and not under MIT:
+Path of Exile game text is the intellectual property of Grinding Gear Games
+(used here for a community localization tool); some unique-item names
+reference PoEDB (chuanhsing); Simplified Chinese uses OpenCC-derived
+dictionaries (Apache-2.0).
 
 Not affiliated with, authorized, or endorsed by Grinding Gear Games.
 "Path of Exile" is a trademark of Grinding Gear Games.
@@ -71,7 +75,10 @@ Poe Zh Trade Tools Pro 是流亡黯道官方交易站的輔助工具。它提供
 • 傳奇物品一鍵開啟 PoeDB(中文介面時)
 • 所有資料(書籤、歷史、設定)都留在你的裝置本機
 
-本專案基於 KroxiLabs 的開源專案 Poe Trade Plus(MIT 授權)。
+擴充程式碼基於 KroxiLabs 的開源專案 Poe Trade Plus(MIT 授權)。翻譯資料為第三方
+內容、不在 MIT 範圍:《Path of Exile》遊戲文本為 Grinding Gear Games 之智慧財產
+(作為玩家社群中文化工具使用);部分傳奇名稱參考 PoEDB(chuanhsing);簡體中文
+使用 OpenCC 衍生字典(Apache-2.0)。
 
 本擴充與 Grinding Gear Games 無關,未獲其授權或背書。
 「Path of Exile」為 Grinding Gear Games 之商標。
@@ -160,5 +167,5 @@ Path of Exile is a trademark of Grinding Gear Games.
 - [ ] At least 1 screenshot 1280×800 or 640×400 (capture the sidebar + a
       translated trade page)
 - [ ] (optional) Small promo tile 440×280
-- [ ] Upload: poe-zh-trade-tools-pro-3.28.01-chrome.zip
+- [ ] Upload: poe-zh-trade-tools-pro-4.0.0-chrome.zip
 - [ ] Visibility: start as "Unlisted" to test, then switch to Public
