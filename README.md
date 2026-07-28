@@ -10,12 +10,12 @@
 > Not affiliated with, authorized, or endorsed by Grinding Gear Games.
 > "Path of Exile" is a trademark of Grinding Gear Games.
 
-> **適用範圍 / Scope:** 本工具的改動以**《流亡黯道》一代(PoE1)國際服**為主;<br>
-> 二代(PoE2)並未做任何修改。<br>
+> **適用範圍 / Scope:** 本工具的改動以**《流亡黯道》一代(PoE1)**為主;<br>
+> 二代(PoE2)僅做交易工具中文化,市集部分並未做任何修改。<br>
 > 注意:本工具不支援中國服(騰訊)。
 >
-> This tool focuses on **Path of Exile 1 (International / Global realm)**;<br>
-> Path of Exile 2 has not been modified.<br>
+> This tool focuses on **Path of Exile 1 (PoE1)**;<br>
+> For Path of Exile 2, only the trade tool is localized — the trade site itself is not modified.<br>
 > Note: this tool does not support the Tencent (China) realm.
 
 ---
