@@ -58,7 +58,13 @@ export default defineContentScript({
         .replace(/\[([^\]]*)\]/g, "$1")
 
     const translateMod = (el: HTMLElement) => {
-      const field = el.querySelector<HTMLElement>("[data-field]")
+      // Normal item mods render inside `[data-field]`; skill-gem quality/alt
+      // stat lines instead render as `.lc > span` (no data-field / data-hash).
+      // Fall back to `.lc` (or the element itself) so gem mods translate too.
+      const field =
+        el.querySelector<HTMLElement>("[data-field]") ||
+        el.querySelector<HTMLElement>(".lc") ||
+        el
       if (!field) return
 
       // Each mod line renders as its own <span> inside [data-field] (multi-line
