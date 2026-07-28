@@ -36,8 +36,8 @@ export default defineConfig({
   },
   manifest: () => ({
     name: "Poe Zh Trade Tools Pro",
-    version: "4.0.0",
-    version_name: "4.0.0.3",
+    version: "4.1.0",
+    version_name: "4.1.0",
     description:
       "Traditional/Simplified Chinese localization plus bookmarks, history and result tools for the Path of Exile trade site.",
     permissions: ["storage", "tabs", "unlimitedStorage"],

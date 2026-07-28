@@ -20,6 +20,13 @@ import { storageService } from "./storage"
 const DEFAULT_BASE_URL = "https://www.pathofexile.com"
 const HISTORY_KEY = "trade-history"
 const MAX_HISTORY = 50
+// When a bookmark is opened, its title is stashed here keyed by the query slug
+// so the freshly-opened tab can label its history entry with the bookmark's
+// name instead of the generic "Trade" fallback (a URL-loaded search leaves the
+// name box empty). Short-lived (the tab reads it within seconds); the TTL means
+// no cross-tab clear is needed, avoiding races.
+const PENDING_TITLES_KEY = "pending-bookmark-titles"
+const PENDING_TITLE_TTL_MS = 2 * 60 * 1000
 const TRADE_REALMS = ["xbox", "sony", "poe2"]
 const TRADE_HOSTNAME_PATTERN =
   /(?:^|\.)pathofexile\.(?:com|tw)$|^poe2\.kakaogames\.com$/i
@@ -278,22 +285,89 @@ export class TradeLocationService {
   private async maybeLogHistory(location: ExactTradeLocationStruct) {
     if (!location.slug || !location.type || !location.league) return
 
-    const history = await this.fetchHistory(location.version)
-    if (history[0] && this.isEqual(history[0], location)) return
+    const key = this.getHistoryStorageKey(location.version)
+    // Migrate any legacy (pre-realm) history into the scoped key first, so the
+    // background append below can't overwrite still-unmigrated entries.
+    await this.fetchHistory(location.version)
 
-    history.unshift({
+    // A bookmark-opened tab knows its intended title (stashed by the bookmark);
+    // prefer that over the page-scraped recommendation, which is empty for a
+    // URL-loaded query and would otherwise fall back to the generic "Trade".
+    const pendingTitle = await this.readPendingTitle(location.slug)
+    const entry = {
       ...location,
       id: uniqueId(),
       title:
+        pendingTitle ||
         searchPanelService.recommendTitle() ||
         translate(get(languageStore), "history.untitledSearch"),
       createdAt: new Date().toISOString()
-    } as TradeLocationHistoryStruct)
+    } as TradeLocationHistoryStruct
 
-    await storageService.setValue(
-      this.getHistoryStorageKey(location.version),
-      history.slice(0, MAX_HISTORY)
+    // Serialize the read-modify-write through the background service worker (a
+    // single writer that processes messages one at a time) so multiple trade
+    // tabs — especially the bookmark "open all in new tabs" action, which spawns
+    // many tabs that each log at once — can't clobber each other's entries the
+    // way concurrent per-tab writes would (lost update).
+    if (await this.logHistoryViaBackground(key, entry)) return
+
+    // Fallback (background unavailable): local read-modify-write.
+    const history = await this.fetchHistory(location.version)
+    if (history[0] && this.isEqual(history[0], location)) return
+    history.unshift(entry)
+    await storageService.setValue(key, history.slice(0, MAX_HISTORY))
+  }
+
+  // Remember bookmark titles by query slug just before opening them, so the
+  // opened tab(s) can label their history entries with the bookmark name.
+  async stashPendingTitles(titlesBySlug: Record<string, string>) {
+    const entries = Object.entries(titlesBySlug).filter(
+      ([slug, title]) => slug && typeof title === "string" && title.trim()
     )
+    if (entries.length === 0) return
+    const existing =
+      (await storageService.getValue<Record<string, string>>(
+        PENDING_TITLES_KEY
+      )) ?? {}
+    for (const [slug, title] of entries) existing[slug] = title
+    await storageService.setEphemeralValue(
+      PENDING_TITLES_KEY,
+      existing,
+      new Date(Date.now() + PENDING_TITLE_TTL_MS)
+    )
+  }
+
+  private async readPendingTitle(slug: string | null): Promise<string | null> {
+    if (!slug) return null
+    const map = await storageService.getValue<Record<string, string>>(
+      PENDING_TITLES_KEY
+    )
+    const title = map?.[slug]
+    return typeof title === "string" && title.trim() ? title : null
+  }
+
+  private async logHistoryViaBackground(
+    key: string,
+    entry: TradeLocationHistoryStruct
+  ): Promise<boolean> {
+    if (!hasValidExtensionContext() || !chrome.runtime?.sendMessage) return false
+    try {
+      const response = await chrome.runtime.sendMessage({
+        query: "log-trade-history",
+        key,
+        entry,
+        max: MAX_HISTORY
+      })
+      return !!response && typeof response === "object"
+    } catch (error) {
+      if (!isExtensionContextInvalidatedError(error)) {
+        console.warn(
+          "[Poe Zh Trade Tools Pro] history log via background failed",
+          error
+        )
+      }
+      return false
+    }
   }
 
   async fetchHistory(

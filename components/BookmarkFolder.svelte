@@ -9,7 +9,9 @@
 
   import {
     getActiveTradeTabTitle,
-    openUrlInActiveTab
+    openUrlInActiveTab,
+    openUrlInNewTab,
+    openUrlsInNewTabs
   } from "../lib/services/active-trade-tab"
   import { bookmarksService } from "../lib/services/bookmarks"
   import {
@@ -352,6 +354,7 @@
   }
 
   const openTradeLive = async (trade: BookmarksTradeStruct) => {
+    await stashTitle(trade)
     await openUrlInActiveTab(
       resolveTradeUrl(trade.location, "/live", true)
     )
@@ -479,8 +482,44 @@
     )
   }
 
+  // Remember a bookmark's title (keyed by its query slug) so the opened tab
+  // labels its history entry with the bookmark name instead of "Trade".
+  const stashTitle = async (trade: BookmarksTradeStruct) => {
+    if (trade.location?.slug) {
+      await tradeLocationService.stashPendingTitles({
+        [trade.location.slug]: trade.title
+      })
+    }
+  }
+
   const openTrade = async (trade: BookmarksTradeStruct) => {
+    await stashTitle(trade)
     await openUrlInActiveTab(resolveTradeUrl(trade.location, "", true))
+  }
+
+  // Open a single saved search in a new tab (keeping the current page).
+  const openTradeInNewTab = async (trade: BookmarksTradeStruct) => {
+    await stashTitle(trade)
+    await openUrlInNewTab(resolveTradeUrl(trade.location, "", true))
+  }
+
+  // Open every saved search in the folder, each in its own new background tab.
+  const openAllInNewTabs = async () => {
+    const list = displayedTrades
+    if (list.length === 0) {
+      flashMessages.alert(translate($languageStore, "folder.noTradesToOpen"))
+      return
+    }
+    const titlesBySlug: Record<string, string> = {}
+    for (const trade of list) {
+      if (trade.location?.slug) titlesBySlug[trade.location.slug] = trade.title
+    }
+    await tradeLocationService.stashPendingTitles(titlesBySlug)
+    const urls = list.map((trade) => resolveTradeUrl(trade.location, "", true))
+    await openUrlsInNewTabs(urls)
+    flashMessages.success(
+      translate($languageStore, "folder.openedTabs", { count: urls.length })
+    )
   }
 
   const exportFolder = () => {
@@ -509,6 +548,36 @@
     } finally {
       isDuplicating = false
     }
+  }
+
+  let clearCompletedPending = $state(false)
+  const requestClearCompleted = () => {
+    clearCompletedPending = true
+  }
+  const cancelClearCompleted = () => {
+    clearCompletedPending = false
+  }
+  const clearCompleted = async () => {
+    if (!folder.id) return
+    const all = await bookmarksService.fetchTradesByFolderId(folder.id, {
+      force: true
+    })
+    const completed = all.filter((entry) => entry.completedAt)
+    if (completed.length === 0) {
+      clearCompletedPending = false
+      flashMessages.alert(translate($languageStore, "folder.noCompletedItems"))
+      return
+    }
+    const remaining = all.filter((entry) => !entry.completedAt)
+    trades = await bookmarksService.persistTrades(remaining, folder.id)
+    await bookmarksService.refresh()
+    hasLoadedTrades = true
+    clearCompletedPending = false
+    flashMessages.success(
+      translate($languageStore, "folder.clearedCompleted", {
+        count: completed.length
+      })
+    )
   }
 
   let editingFolder = $state(false)
@@ -612,8 +681,27 @@
   }
 
   const handleTradeCardClick = (event: MouseEvent | PointerEvent, trade: BookmarksTradeStruct) => {
+    // Only the primary (left) button opens in the current tab; middle/right are
+    // handled separately (or ignored).
+    if (event.button !== 0) return
     if (shouldIgnoreTradeCardClick(event.target)) return
     openTradeFromCard(trade)
+  }
+
+  // Middle-click opens the bookmark in a new tab, just like the ⧉ button.
+  const handleTradeCardAuxClick = (event: MouseEvent, trade: BookmarksTradeStruct) => {
+    if (event.button !== 1) return
+    if (shouldIgnoreTradeCardClick(event.target)) return
+    if (suppressNextTradeOpen) return
+    event.preventDefault()
+    void openTradeInNewTab(trade)
+  }
+
+  // Suppress the browser's middle-click autoscroll cursor on the card.
+  const handleTradeCardMouseDown = (event: MouseEvent) => {
+    if (event.button === 1 && !shouldIgnoreTradeCardClick(event.target)) {
+      event.preventDefault()
+    }
   }
 
   const replaceSearchWithCurrent = async (trade: BookmarksTradeStruct) => {
@@ -769,6 +857,7 @@
         onArchive={onArchiveEvent}
         onExport={exportFolder}
         onDuplicate={duplicateFolder}
+        onClearCompleted={requestClearCompleted}
         onDelete={onDeleteEvent} />
     </div>
   </div>
@@ -919,7 +1008,9 @@
                   class:is-drag-over={dragOverIndex === i}
                   role="group"
                   aria-label={trade.title}
-                  onpointerup={(event) => handleTradeCardClick(event, trade)}>
+                  onpointerup={(event) => handleTradeCardClick(event, trade)}
+                  onauxclick={(event) => handleTradeCardAuxClick(event, trade)}
+                  onmousedown={handleTradeCardMouseDown}>
                   <button
                     type="button"
                     class="drag-handle"
@@ -959,6 +1050,7 @@
                           <TradeActionsMenu
                             {trade}
                             onEdit={() => void startEditingTrade(trade)}
+                            onOpenNewTab={() => void openTradeInNewTab(trade)}
                             onReplace={() => void replaceSearchWithCurrent(trade)}
                             onCopy={() => copyTrade(trade)}
                             onOpenLive={() => void openTradeLive(trade)}
@@ -977,6 +1069,7 @@
                         <TradeActionsMenu
                           {trade}
                           onEdit={() => void startEditingTrade(trade)}
+                          onOpenNewTab={() => void openTradeInNewTab(trade)}
                           onReplace={() => void replaceSearchWithCurrent(trade)}
                           onCopy={() => copyTrade(trade)}
                           onOpenLive={() => void openTradeLive(trade)}
@@ -1004,6 +1097,14 @@
               theme="gold"
               onClick={createTradeFromCurrent} />
           </div>
+          {#if displayedTrades.length > 0}
+            <div class="open-all-anchor">
+              <Button
+                label={translate($languageStore, "folder.openAllInNewTabs")}
+                theme="gold"
+                onClick={openAllInNewTabs} />
+            </div>
+          {/if}
         </div>
       </LoadingContainer>
     </div>
@@ -1024,6 +1125,17 @@
       void deleteTrade(tradePendingDelete)
     }
   }} />
+
+<ConfirmDialog
+  open={clearCompletedPending}
+  title={translate($languageStore, "confirm.clearCompletedTitle")}
+  message={translate($languageStore, "confirm.clearCompletedMessage", {
+    title: folder.title
+  })}
+  confirmLabel={translate($languageStore, "confirm.delete")}
+  cancelLabel={translate($languageStore, "confirm.cancel")}
+  onCancel={cancelClearCompleted}
+  onConfirm={() => void clearCompleted()} />
 
 <ConfirmDialog
   open={!!categoryPendingDelete}
@@ -1445,8 +1557,14 @@
   background-color: rgba(163, 141, 109, 0.1);
 }
 .trade-item.is-completed {
-  background: rgba(30, 77, 30, 0.14);
-  border-color: rgba(30, 77, 30, 0.28);
+  background: rgba(30, 77, 30, 0.32);
+  border-color: rgba(76, 163, 76, 0.6);
+  box-shadow: inset 3px 0 0 rgba(86, 184, 86, 0.9);
+}
+.trade-item.is-completed .trade-link {
+  text-decoration: line-through;
+  text-decoration-color: rgba(120, 190, 120, 0.7);
+  color: rgba(160, 205, 160, 0.72);
 }
 .trade-item.is-drag-over {
   border-color: rgba(163, 141, 109, 0.42);
@@ -1541,6 +1659,8 @@
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
   border-top: 1px solid rgba(163, 141, 109, 0.08);
   background: linear-gradient(180deg, rgba(163, 141, 109, 0.04), rgba(163, 141, 109, 0));
 }
@@ -1587,8 +1707,15 @@
 
 .save-search-anchor {
   display: flex;
-  flex: 1 1 180px;
+  flex: 0 1 auto;
   min-width: 0;
+}
+/* Push "open all in new tabs" to the right edge of the footer. */
+.open-all-anchor {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-left: auto;
 }
 
 :global(.folder-action-footer-btn) {

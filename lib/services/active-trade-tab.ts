@@ -63,6 +63,74 @@ export const openUrlInActiveTab = async (url: string) => {
   }
 }
 
+// Open one URL in a NEW tab (leaving the current page intact). In the popup /
+// background context chrome.tabs.create is used directly; in a content-script
+// sidebar (no chrome.tabs) we ask the background to create it, falling back to
+// window.open for the single-tab case.
+export const openUrlInNewTab = async (url: string, active = true) => {
+  if (hasValidExtensionContext() && chrome.tabs?.create) {
+    try {
+      await chrome.tabs.create({ url, active })
+      return
+    } catch (error) {
+      if (!isExtensionContextInvalidatedError(error)) {
+        console.warn("[Poe Zh Trade Tools Pro] Failed to open new tab", error)
+      }
+    }
+  }
+
+  if (hasValidExtensionContext() && chrome.runtime?.sendMessage) {
+    try {
+      await chrome.runtime.sendMessage({ query: "open-urls-in-tabs", urls: [url], active })
+      return
+    } catch (error) {
+      if (!isExtensionContextInvalidatedError(error)) {
+        console.warn("[Poe Zh Trade Tools Pro] Failed to request new tab", error)
+      }
+    }
+  }
+
+  if (typeof globalThis.open === "function") {
+    globalThis.open(url, "_blank", "noopener")
+  }
+}
+
+// Open several URLs, each in its own new background tab. Routed through the
+// background so a content-script sidebar can open many tabs at once without
+// tripping the browser's popup blocker (a window.open loop would).
+export const openUrlsInNewTabs = async (urls: string[]) => {
+  const cleaned = urls.filter((url) => typeof url === "string" && url.length > 0)
+  if (cleaned.length === 0) return
+
+  if (hasValidExtensionContext() && chrome.tabs?.create) {
+    try {
+      for (const url of cleaned) {
+        await chrome.tabs.create({ url, active: false })
+      }
+      return
+    } catch (error) {
+      if (!isExtensionContextInvalidatedError(error)) {
+        console.warn("[Poe Zh Trade Tools Pro] Failed to open tabs", error)
+      }
+    }
+  }
+
+  if (hasValidExtensionContext() && chrome.runtime?.sendMessage) {
+    try {
+      await chrome.runtime.sendMessage({ query: "open-urls-in-tabs", urls: cleaned, active: false })
+      return
+    } catch (error) {
+      if (!isExtensionContextInvalidatedError(error)) {
+        console.warn("[Poe Zh Trade Tools Pro] Failed to request tabs", error)
+      }
+    }
+  }
+
+  if (typeof globalThis.open === "function") {
+    for (const url of cleaned) globalThis.open(url, "_blank", "noopener")
+  }
+}
+
 export const sendMessageToActiveTradeTab = async <T>(message: unknown) => {
   const tab = await getActiveTradeTab()
 

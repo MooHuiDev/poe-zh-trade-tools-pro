@@ -349,6 +349,9 @@ export const simplifiedChineseTranslations: Record<string, TranslationValue> = {
   "confirm.deleteFolderMessage": ({ title }) =>
     `这将永久删除「${title}」以及其中所有已保存的交易。`,
   "confirm.deleteTradeTitle": "删除已保存的交易？",
+  "confirm.clearCompletedTitle": "清除已完成项目？",
+  "confirm.clearCompletedMessage": ({ title }) =>
+    `这将从文件夹「${title}」永久删除所有已完成的项目。`,
   "confirm.deleteTradeMessage": ({ title }) =>
     `这将从文件夹中永久删除「${title}」。`,
   "history.clear": "清除历史",
@@ -400,6 +403,13 @@ export const simplifiedChineseTranslations: Record<string, TranslationValue> = {
   "folder.duplicatedFolder": ({ title }) => `已拷贝文件夹「${title}」`,
   "folder.saveFolderChanges": "保存文件夹",
   "folder.saveCurrentSearch": "保存目前搜索",
+  "folder.openInNewTab": "在新标签页打开",
+  "folder.openAllInNewTabs": "全部打开新标签页",
+  "folder.openedTabs": ({ count }) => `已打开 ${count} 个标签页`,
+  "folder.noTradesToOpen": "没有可打开的搜索。",
+  "folder.clearCompleted": "清除已完成项目",
+  "folder.noCompletedItems": "没有已完成的项目可清除。",
+  "folder.clearedCompleted": ({ count }) => `已清除 ${count} 个已完成项目`,
   "folder.loadTradesError": "无法加载交易。",
   "folder.deleteTradeError": "无法删除交易。",
   "folder.duplicateTradeError": "无法拷贝交易。",

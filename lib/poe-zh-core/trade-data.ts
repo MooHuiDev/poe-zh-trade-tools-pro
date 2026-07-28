@@ -56,7 +56,7 @@ const fetchStatTpl = async (): Promise<{ tw?: StatTpl; cn?: StatTpl } | null> =>
 }
 
 const STORE_AT_KEY = "zhCoreAt"
-const MAX_AGE_MS = 24 * 60 * 60 * 1000
+const MAX_AGE_MS = 8 * 60 * 60 * 1000
 
 type StatOption = { id?: number | string; text?: string }
 type StatEntry = {

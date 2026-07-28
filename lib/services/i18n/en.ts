@@ -379,6 +379,9 @@ export const englishTranslations: Record<string, TranslationValue> = {
   "confirm.deleteFolderMessage": ({ title }) =>
     `This will permanently delete "${title}" and all saved trades inside it.`,
   "confirm.deleteTradeTitle": "Delete saved trade?",
+  "confirm.clearCompletedTitle": "Clear completed items?",
+  "confirm.clearCompletedMessage": ({ title }) =>
+    `This will permanently remove all completed items from "${title}".`,
   "confirm.deleteTradeMessage": ({ title }) =>
     `This will permanently delete "${title}" from the folder.`,
   "history.clear": "Clear History",
@@ -430,6 +433,14 @@ export const englishTranslations: Record<string, TranslationValue> = {
   "folder.duplicatedFolder": ({ title }) => `Duplicated folder "${title}"`,
   "folder.saveFolderChanges": "Save folder",
   "folder.saveCurrentSearch": "Save current search",
+  "folder.openInNewTab": "Open in new tab",
+  "folder.openAllInNewTabs": "Open all in new tabs",
+  "folder.openedTabs": ({ count }) => `Opened ${count} tab${count === 1 ? "" : "s"}`,
+  "folder.noTradesToOpen": "No saved searches to open.",
+  "folder.clearCompleted": "Clear completed items",
+  "folder.noCompletedItems": "No completed items to clear.",
+  "folder.clearedCompleted": ({ count }) =>
+    `Cleared ${count} completed item${count === 1 ? "" : "s"}`,
   "folder.loadTradesError": "Couldn't load trades.",
   "folder.deleteTradeError": "Couldn't delete trade.",
   "folder.duplicateTradeError": "Couldn't duplicate trade.",

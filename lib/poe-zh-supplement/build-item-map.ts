@@ -17,14 +17,22 @@
 import { SUPPLEMENT_ZH_TW } from "./dict"
 import { SUPPLEMENT_ZH_CN } from "./dict-cn"
 import { toSimplified } from "~/lib/poe-zh-cn/convert"
+import {
+  SCRYING_ORB_BASE_TW,
+  SCRYING_MAP_NAMES_TW,
+  SCRYING_MAP_NAMES_CN
+} from "~/lib/poe-zh-supplement/scrying-map-names"
+import { BEAST_NAMES_CN } from "~/lib/poe-zh-supplement/beast-names-cn"
 
 const ITEMS_US = "https://www.pathofexile.com/api/trade/data/items"
 const ITEMS_TW = "https://pathofexile.tw/api/trade/data/items"
+const STATIC_US = "https://www.pathofexile.com/api/trade/data/static"
+const STATIC_TW = "https://pathofexile.tw/api/trade/data/static"
 
 const STORE_KEY = "zhSuppItemMap"
 const STORE_AT_KEY = "zhSuppItemMapAt"
 const ITEMS_STORE_KEY = "zhCore_items"
-const MAX_AGE_MS = 24 * 60 * 60 * 1000
+const MAX_AGE_MS = 8 * 60 * 60 * 1000
 
 type TradeEntry = {
   name?: string
@@ -123,6 +131,40 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
     const [us, tw] = await Promise.all([fetchItems(ITEMS_US), fetchItems(ITEMS_TW)])
     const usCategories = us.result ?? []
     const twCategories = tw.result ?? []
+
+    // Bestiary beasts. The item-search "Itemised Monsters" list carries only an
+    // English `type`; the static "Beasts" list is keyed by a language-neutral
+    // slug, so pair US(slug->English) with TW(slug->中) to get the TW name.
+    const beastTw: Record<string, string> = {}
+    try {
+      const [usS, twS] = await Promise.all([
+        fetchItems(STATIC_US),
+        fetchItems(STATIC_TW)
+      ])
+      const enBySlug: Record<string, string> = {}
+      const zhBySlug: Record<string, string> = {}
+      for (const c of usS.result ?? []) {
+        if (String(c.id ?? "").toLowerCase() !== "beasts") continue
+        for (const e of c.entries ?? []) {
+          const it = e as { id?: string; text?: string }
+          if (it.id && it.text) enBySlug[it.id] = it.text
+        }
+      }
+      for (const c of twS.result ?? []) {
+        if (String(c.id ?? "").toLowerCase() !== "beasts") continue
+        for (const e of c.entries ?? []) {
+          const it = e as { id?: string; text?: string }
+          if (it.id && it.text) zhBySlug[it.id] = it.text
+        }
+      }
+      for (const slug in enBySlug) {
+        const en = enBySlug[slug]
+        const zh = zhBySlug[slug]
+        if (en && zh && hasChinese(zh)) beastTw[normalize(en)] = zh
+      }
+    } catch (e) {
+      console.error("[zh-supplement] beast static fetch failed", e)
+    }
 
     // Merge the remote (GitHub-hosted) unique dictionary over the bundled one.
     // Remote entries win; if the fetch fails we fall back to bundled only.
@@ -367,6 +409,35 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
     // trade API is authoritative and already wins; this only covers gaps).
     for (const [k, v] of Object.entries(GEM_TW)) if (v && !map[k]) map[k] = v
 
+    // Language-independent `type`+`disc` pairing. Some items carry a NUMERIC
+    // `type` that is identical across locales (e.g. the map-specific "Scrying
+    // Orb (Strand)" currency, whose type is a numeric map id and disc is
+    // "scrying_orb"). Pair US text -> TW text directly by (type|disc) so the map
+    // name in the parentheses gets translated. Gems don't collide here because
+    // their `type` is the localized base name (differs between US and TW).
+    const twByTypeDisc = new Map<string, string>()
+    for (const cat of twCategories) {
+      for (const e of cat.entries ?? []) {
+        if (e.type && e.disc && e.text) {
+          twByTypeDisc.set(`${e.type} ${e.disc}`, e.text.trim())
+        }
+      }
+    }
+    for (const cat of usCategories) {
+      for (const e of cat.entries ?? []) {
+        if (!e.type || !e.disc || !e.text) continue
+        let zh = twByTypeDisc.get(`${e.type} ${e.disc}`)
+        // Gap-fill: "Scrying Orb (<Map>)" for maps the TW Atlas doesn't
+        // carry yet — compose 占卜寶珠 (中文地圖名) from bundled PoeDB names.
+        if ((!zh || !hasChinese(zh)) && e.disc === "scrying_orb") {
+          const mm = e.text.match(/\(([^)]+)\)\s*$/)
+          const mapZh = mm ? SCRYING_MAP_NAMES_TW[normalize(mm[1])] : undefined
+          if (mapZh) zh = `${SCRYING_ORB_BASE_TW} (${mapZh})`
+        }
+        if (zh && hasChinese(zh)) map[normalize(e.text)] = zh
+      }
+    }
+
     // Build a bilingual "中文 (English)" tradeitems result for injection so the
     // item search box and item-based filter dropdowns (map/legacy reward, etc.)
     // are searchable in BOTH languages. The English `type`/`name` are kept
@@ -383,6 +454,9 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
     const addReverse = (zh: string | undefined, en: string) => {
       if (zh && en && !(zh in reverse)) reverse[zh] = en
     }
+
+    // Beast names (static slug pairing) win over any positional guess.
+    for (const k in beastTw) map[k] = beastTw[k]
 
     const items = usCategories.map((cat) => ({
       ...cat,
@@ -437,6 +511,27 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
     // Override with authentic 国服 gem names (PoeDB): these are DIFFERENT words,
     // not just simplified characters, so they must replace the OpenCC guess.
     for (const [k, v] of Object.entries(GEM_CN)) if (v) cnMap[k] = v
+    // Authentic 国服 beast names (PoeDB): OpenCC of the TW name is wrong for
+    // many (e.g. 黑羽之莫丽根, not 黑色莫里根). Unmatched beasts keep OpenCC.
+    for (const k in BEAST_NAMES_CN) cnMap[k] = BEAST_NAMES_CN[k]
+    // Fix the "(<Map>)" suffix on CN item names for maps the TW Atlas lacks —
+    // covers Scrying Orb, Blighted Map, Blight-ravaged Map and any other
+    // `disc`-tagged map-suffixed item that shares the map id. cnMap was seeded
+    // by OpenCC of the TW name, which is WRONG for these maps (e.g. 远古街区,
+    // not 血腥阵地). Only entries with a `disc` are touched, so a plain item
+    // ending in "(Core)" etc. is left alone.
+    for (const cat of usCategories) {
+      for (const e of cat.entries ?? []) {
+        if (!e.disc || !e.text) continue
+        const mm = e.text.match(/\(([^)]+)\)\s*$/)
+        if (!mm) continue
+        const cn = SCRYING_MAP_NAMES_CN[normalize(mm[1])]
+        const key = normalize(e.text)
+        if (cn && cnMap[key]) {
+          cnMap[key] = cnMap[key].replace(/\s*\([^)]*\)\s*$/, "") + ` (${cn})`
+        }
+      }
+    }
     const zhOfCn = (english: string) => {
       const key = normalize(english)
       return (

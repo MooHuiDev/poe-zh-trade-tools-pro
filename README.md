@@ -82,9 +82,9 @@ Based on the open-source **[Poe Trade Plus](https://github.com/KroxiLabs/Kroxitr
 by KroxiLabs, licensed under the MIT License. The Traditional / Simplified
 Chinese localization and integration is by **MooHui Dev**.
 
-部分傳奇物品名稱參考自 **[PoEDB](https://poedb.tw/)**(chuanhsing 製作),特此致謝。
+部分中文翻譯資料參考自 **[PoEDB](https://poedb.tw/)**(chuanhsing 製作),特此致謝。
 
-Some unique-item name references come from **[PoEDB](https://poedb.tw/)** (by chuanhsing) — thanks!
+Some Chinese translation data references **[PoEDB](https://poedb.tw/)** (by chuanhsing) — thanks!
 
 ## License / 授權
 
@@ -92,7 +92,7 @@ Some unique-item name references come from **[PoEDB](https://poedb.tw/)** (by ch
 
 `data/` 目錄內的**翻譯資料檔為第三方內容,不在 MIT 授權範圍**,各依其來源授權:
 - 《Path of Exile》遊戲文本(詞綴、物品 / 傳奇名稱、通貨等)為 **Grinding Gear Games** 之智慧財產;本專案僅作為玩家社群中文化工具使用。
-- 部分傳奇物品名稱參考自 **[PoEDB](https://poedb.tw/)**(chuanhsing)。
+- 部分中文翻譯資料參考自 **[PoEDB](https://poedb.tw/)**(chuanhsing)。
 - 簡體中文轉換使用 **[OpenCC](https://github.com/BYVoid/OpenCC)** 衍生字典(Apache-2.0)。
 
 「Path of Exile」為 Grinding Gear Games 之商標;本專案為玩家社群工具,與 GGG 無關。
@@ -103,7 +103,7 @@ The extension **code** is under the [MIT License](LICENSE) (original © KroxiLab
 
 The **translation data files under `data/` are third-party content and are NOT covered by the MIT license**; each remains under its own source's terms:
 - Path of Exile game text (stat descriptions, item / unique names, currencies) is the intellectual property of **Grinding Gear Games**; used here solely for a community localization tool.
-- Some unique-item names reference **[PoEDB](https://poedb.tw/)** (chuanhsing).
+- Some Chinese translation data references **[PoEDB](https://poedb.tw/)** (chuanhsing).
 - Simplified-Chinese conversion uses dictionaries derived from **[OpenCC](https://github.com/BYVoid/OpenCC)** (Apache-2.0).
 
 "Path of Exile" is a trademark of Grinding Gear Games. This is a community fan tool, not affiliated with GGG.

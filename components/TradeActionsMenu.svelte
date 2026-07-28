@@ -10,6 +10,7 @@
   import SvgIcon from "./SvgIcon.svelte";
 
   import editIcon from "lucide-static/icons/pencil.svg?raw";
+  import externalLinkIcon from "lucide-static/icons/external-link.svg?raw";
   import replaceIcon from "lucide-static/icons/refresh-cw.svg?raw";
   import copyIcon from "lucide-static/icons/copy.svg?raw";
   import liveIcon from "lucide-static/icons/activity.svg?raw";
@@ -20,6 +21,7 @@
   interface Props {
     trade: BookmarksTradeStruct;
     onEdit: () => void;
+    onOpenNewTab?: () => void;
     onReplace: () => void;
     onCopy: () => void;
     onOpenLive: () => void;
@@ -36,6 +38,7 @@
   let {
     trade,
     onEdit,
+    onOpenNewTab,
     onReplace,
     onCopy,
     onOpenLive,
@@ -406,6 +409,20 @@
         </span>
       </button>
     {/if}
+
+    {#if onOpenNewTab}
+      <button
+        type="button"
+        class="trade-action-btn trade-action-btn--newtab"
+        title={translate($languageStore, "folder.openInNewTab")}
+        aria-label={translate($languageStore, "folder.openInNewTab")}
+        onclick={stopAndRun(() => runInlineAction(onOpenNewTab!))}
+      >
+        <span class="trade-action-btn__icon" aria-hidden="true">
+          <SvgIcon svg={externalLinkIcon} />
+        </span>
+      </button>
+    {/if}
   </div>
 </div>
 
@@ -414,6 +431,7 @@
   position: relative;
   display: flex;
   align-items: center;
+  flex: 1 1 auto;
   min-width: 0;
 }
 
@@ -421,7 +439,14 @@
   display: flex;
   align-items: center;
   gap: 4px;
+  flex: 1 1 auto;
   min-width: 0;
+}
+
+/* "Open in new tab" is pushed to the far-right edge, separated from the
+   edit/complete/delete/more cluster. */
+.trade-action-btn--newtab {
+  margin-left: auto;
 }
 
 .trade-actions-menu__inline.is-compact {

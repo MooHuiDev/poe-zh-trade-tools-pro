@@ -10,6 +10,7 @@
   import copyIcon from "lucide-static/icons/copy.svg?raw";
   import uploadIcon from "lucide-static/icons/upload.svg?raw";
   import trashIcon from "lucide-static/icons/trash-2.svg?raw";
+  import listChecksIcon from "lucide-static/icons/list-checks.svg?raw";
   import archiveIcon from "lucide-static/icons/archive.svg?raw";
   import archiveRestoreIcon from "lucide-static/icons/archive-restore.svg?raw";
   import moreIcon from "lucide-static/icons/more-horizontal.svg?raw";
@@ -20,6 +21,7 @@
     onArchive: () => void;
     onExport: () => void;
     onDuplicate: () => void;
+    onClearCompleted: () => void;
     onDelete: () => void;
   }
 
@@ -29,6 +31,7 @@
     onArchive,
     onExport,
     onDuplicate,
+    onClearCompleted,
     onDelete
   }: Props = $props();
 
@@ -72,6 +75,12 @@
       icon: copyIcon,
       label: translate($languageStore, "folder.duplicateFolder"),
       handler: onDuplicate
+    },
+    {
+      id: "clearCompleted",
+      icon: listChecksIcon,
+      label: translate($languageStore, "folder.clearCompleted"),
+      handler: onClearCompleted
     },
     {
       id: "delete",
