@@ -56,3 +56,6 @@ tmp_video_frames/
 
 # internal store copy sheet — keep private (PRIVACY-POLICY.md stays public)
 store/STORE-LISTING.md
+
+# local backup files
+*.bak
