@@ -12,6 +12,8 @@ const iconMap = {
 
 const firefoxBinary = process.env.FIREFOX_BINARY
 const useManualFirefoxRunner = process.env.WXT_FIREFOX_MANUAL === "1"
+const firefoxExtensionId =
+  process.env.FIREFOX_EXTENSION_ID || "poe-zh-trade-tools-pro@moohuidev"
 
 export default defineConfig({
   modules: ["@wxt-dev/module-svelte"],
@@ -55,6 +57,14 @@ export default defineConfig({
     action: {
       default_title: "Poe Zh Trade Tools Pro",
       default_icon: iconMap
+    },
+    browser_specific_settings: {
+      gecko: {
+        id: firefoxExtensionId,
+        data_collection_permissions: {
+          required: ["none"]
+        }
+      }
     }
   }),
   vite: () => ({

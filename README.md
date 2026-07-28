@@ -60,6 +60,7 @@ search that works in both Chinese and English.
 
 ### Install
 - Chrome Web Store: https://chromewebstore.google.com/detail/poe-zh-trade-tools-pro/olebcconlpeiohdbglmhdggklbajcelc
+- Firefox Add-ons: to be added after AMO approval.
 - From source: see **Build** below, then load `build/chrome-mv3` via
   `chrome://extensions` → Developer mode → Load unpacked.
 
@@ -67,7 +68,15 @@ search that works in both Chinese and English.
 ```bash
 pnpm install
 pnpm run build:chrome   # output in build/chrome-mv3
+pnpm run build:firefox  # output in build/firefox-mv3
+pnpm run package:firefox # output in build/*-firefox.zip
 ```
+
+### Firefox release
+Maintainers can use [docs/FIREFOX_RELEASE.md](docs/FIREFOX_RELEASE.md) for the
+AMO checklist, Firefox extension ID notes, data collection declaration, and
+permission explanations. For temporary testing, see
+[docs/FIREFOX_INSTALL.md](docs/FIREFOX_INSTALL.md).
 
 ### Privacy
 No personal data is collected or transmitted. Everything is stored locally.
