@@ -822,7 +822,12 @@
     "overloadedintensitysupport": "超載強化輔助",
     "scornfulheraldsupport": "輕蔑先鋒輔助",
     "vaalsacrificesupport": "瓦爾犧牲輔助",
-    "eclipsesupport": "朔望輔助"
+    "eclipsesupport": "朔望輔助",
+    "arcticarmour": "極地裝甲",
+    "phaserun": "暗影迷蹤",
+    "vaalbreach": "瓦爾．裂痕",
+    "crystalfallsupport": "晶墜輔助",
+    "itemquantitysupport": "物品數量增幅輔助"
   },
   "cn": {
     "cleave": "劈砍",
@@ -1646,6 +1651,11 @@
     "overloadedintensitysupport": "过载强度（辅）",
     "scornfulheraldsupport": "蔑视使者（辅）",
     "vaalsacrificesupport": "瓦尔献祭（辅）",
-    "eclipsesupport": "月蚀（辅）"
+    "eclipsesupport": "月蚀（辅）",
+    "arcticarmour": "极地装甲",
+    "phaserun": "暗影迷踪",
+    "vaalbreach": "瓦尔：裂隙",
+    "crystalfallsupport": "水晶陨落（辅）",
+    "itemquantitysupport": "物品数量增幅(辅)"
   }
 }
