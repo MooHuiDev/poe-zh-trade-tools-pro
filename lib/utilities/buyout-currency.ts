@@ -163,39 +163,55 @@ export const setBuyoutCurrencyPreset = (currency: BuyoutCurrency) => {
 
   if (!buyoutFilter || !multiselect || !input) return
 
+  // Every known localized name for this currency (all trade-site languages).
+  // We match the option against ALL of them instead of guessing one language
+  // from the filter title — the title-based lookup breaks whenever the page is
+  // translated (e.g. our own zh localization), which made this fail on the
+  // international realm even though the same code worked on Garena TW.
+  const names = buyoutCurrencyLabels[currency]
+    .map((label) => normalizeLabel(label))
+    .filter(Boolean)
+
+  // Open the dropdown and clear any filter text so every option renders. (The
+  // old code typed a single localized name; when that name was in the wrong
+  // language the list filtered down to "No elements found" and nothing could be
+  // selected.)
   input.focus()
   input.click()
-  const localizedCurrency = getLocalizedCurrencyLabel(buyoutFilter, currency)
-
-  setNativeInputValue(input, localizedCurrency)
-  input.setSelectionRange(localizedCurrency.length, localizedCurrency.length)
+  setNativeInputValue(input, "")
   input.dispatchEvent(new Event("input", { bubbles: true }))
 
-  queueMicrotask(() => {
-    // Tolerant matching so it also works when the page is translated: POE Trade
-    // zh renders options like "混沌石 (Chaos Orb)", so we accept an exact match,
-    // or an option whose text contains the localized label or the English name.
+  const selectOption = () => {
     const options = Array.from(
       multiselect.querySelectorAll<HTMLElement>(".multiselect__option")
     )
-    const option =
-      options.find(
-        (candidate) => normalizeLabel(candidate.textContent) === localizedCurrency
-      ) ||
-      options.find((candidate) => {
-        const text = normalizeLabel(candidate.textContent)
-        return text.includes(currency) || text.includes(localizedCurrency)
-      })
+    if (options.length === 0) return false
 
-    option?.dispatchEvent(
-      new MouseEvent("click", {
-        bubbles: true,
-        cancelable: true,
-        view: window
-      })
+    const texts = options.map((o) => normalizeLabel(o.textContent))
+    // Prefer an exact name match, then "starts with" (handles bilingual
+    // "神聖石 (Divine Orb)" options while still separating "混沌石" from
+    // "與混沌石等值"), then a loose contains as a last resort.
+    let index = texts.findIndex((t) => names.includes(t))
+    if (index === -1)
+      index = texts.findIndex((t) => names.some((n) => t.startsWith(n)))
+    if (index === -1)
+      index = texts.findIndex((t) => names.some((n) => t.includes(n)))
+    if (index === -1) return false
+
+    options[index].dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true, view: window })
     )
     input.dispatchEvent(new Event("change", { bubbles: true }))
-  })
+    return true
+  }
+
+  // Options render asynchronously after the dropdown opens; retry a few frames.
+  let attempts = 0
+  const tick = () => {
+    if (selectOption() || attempts++ >= 8) return
+    setTimeout(tick, 30)
+  }
+  setTimeout(tick, 0)
 }
 
 export const clearBuyoutPrice = () => {

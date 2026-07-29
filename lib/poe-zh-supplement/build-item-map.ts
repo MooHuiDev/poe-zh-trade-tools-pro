@@ -23,6 +23,7 @@ import {
   SCRYING_MAP_NAMES_CN
 } from "~/lib/poe-zh-supplement/scrying-map-names"
 import { BEAST_NAMES_CN } from "~/lib/poe-zh-supplement/beast-names-cn"
+import { BASE_NAMES_TW, BASE_NAMES_CN } from "~/lib/poe-zh-supplement/base-names"
 
 const ITEMS_US = "https://www.pathofexile.com/api/trade/data/items"
 const ITEMS_TW = "https://pathofexile.tw/api/trade/data/items"
@@ -132,9 +133,12 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
     const usCategories = us.result ?? []
     const twCategories = tw.result ?? []
 
-    // Bestiary beasts. The item-search "Itemised Monsters" list carries only an
-    // English `type`; the static "Beasts" list is keyed by a language-neutral
-    // slug, so pair US(slug->English) with TW(slug->中) to get the TW name.
+    // Static-data slug pairing. The static endpoint (currency, fragments,
+    // breachstones, embers, keys, essences, oils, catalysts, beasts, …) is keyed
+    // by a language-neutral slug. Pair US(slug->English) with TW(slug->中) to
+    // translate every item-search entry that shares that English name — covers
+    // the itemised beasts AND the "map"-category fragments/breachstones/etc. that
+    // the positional US<->TW pairing can't reach.
     const beastTw: Record<string, string> = {}
     try {
       const [usS, twS] = await Promise.all([
@@ -144,14 +148,12 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
       const enBySlug: Record<string, string> = {}
       const zhBySlug: Record<string, string> = {}
       for (const c of usS.result ?? []) {
-        if (String(c.id ?? "").toLowerCase() !== "beasts") continue
         for (const e of c.entries ?? []) {
           const it = e as { id?: string; text?: string }
           if (it.id && it.text) enBySlug[it.id] = it.text
         }
       }
       for (const c of twS.result ?? []) {
-        if (String(c.id ?? "").toLowerCase() !== "beasts") continue
         for (const e of c.entries ?? []) {
           const it = e as { id?: string; text?: string }
           if (it.id && it.text) zhBySlug[it.id] = it.text
@@ -457,6 +459,9 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
 
     // Beast names (static slug pairing) win over any positional guess.
     for (const k in beastTw) map[k] = beastTw[k]
+    // Base-item names the TW trade API lacks (talismans / newer bases),
+    // sourced from PoeDB — fill only gaps so real pairings still win.
+    for (const k in BASE_NAMES_TW) if (!map[k]) map[k] = BASE_NAMES_TW[k]
 
     const items = usCategories.map((cat) => ({
       ...cat,
@@ -514,6 +519,8 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
     // Authentic 国服 beast names (PoeDB): OpenCC of the TW name is wrong for
     // many (e.g. 黑羽之莫丽根, not 黑色莫里根). Unmatched beasts keep OpenCC.
     for (const k in BEAST_NAMES_CN) cnMap[k] = BEAST_NAMES_CN[k]
+    // 国服 base-item names (PoeDB) for bases the TW API lacks.
+    for (const k in BASE_NAMES_CN) cnMap[k] = BASE_NAMES_CN[k]
     // Fix the "(<Map>)" suffix on CN item names for maps the TW Atlas lacks —
     // covers Scrying Orb, Blighted Map, Blight-ravaged Map and any other
     // `disc`-tagged map-suffixed item that shares the map id. cnMap was seeded

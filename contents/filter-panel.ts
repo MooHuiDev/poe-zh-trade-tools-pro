@@ -679,6 +679,13 @@ export const initFilterPanel = () => {
   const prefixingInputs = new WeakSet<HTMLInputElement>()
 
   const ensureRegexPrefix = (input: HTMLInputElement, inputType?: string) => {
+    // Gated by the "Fuzzy search by default (~)" setting. This MAIN-world script
+    // can't read chrome.storage, so the isolated-world zh-fuzzy bridge mirrors
+    // the setting onto <html data-zh-auto-fuzzy="on|off">. Absent = on (default).
+    if (
+      document.documentElement.getAttribute("data-zh-auto-fuzzy") === "off"
+    )
+      return
     const value = input.value ?? ""
     if (!value || value.startsWith("~") || value.startsWith(" ")) return
     if (inputType?.startsWith("delete")) return

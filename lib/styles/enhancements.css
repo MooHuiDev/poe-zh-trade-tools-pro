@@ -643,3 +643,20 @@ body.bt-dev-result-actions-visible .row > .left > button.bt-open-poedb {
 .hidden {
   display: none !important;
 }
+
+/* Coloured mod-type badges in the stat-filter dropdown.
+   Our translation sets the badge text (entry.type) to the localized group label,
+   which turns the site's `.mutate-type-<type>` class into a Chinese one that the
+   site's English-keyed colour rules don't match — so the badge lost its colour.
+   Re-apply the official PoE colours for the tw / cn labels (and the capitalized
+   English fallbacks that occasionally leak through). Colours sampled from the
+   Garena TW trade site. */
+.mutate-type-破裂,.mutate-type-Fractured{background-color:rgb(162,145,98)!important}
+.mutate-type-固性屬性,.mutate-type-固性属性,.mutate-type-Implicit{background-color:rgb(101,98,30)!important}
+.mutate-type-附魔,.mutate-type-Enchant{background-color:rgb(139,87,156)!important}
+.mutate-type-災魘聯盟,.mutate-type-灾魇联盟,.mutate-type-Scourge{background-color:rgb(255,110,37)!important}
+.mutate-type-已工藝,.mutate-type-已工艺,.mutate-type-Crafted{background-color:rgb(0,96,191)!important}
+.mutate-type-掘獄聯盟,.mutate-type-掘狱联盟,.mutate-type-Delve{background-color:rgb(173,99,27)!important}
+.mutate-type-最後通牒,.mutate-type-最后通牒,.mutate-type-Ultimatum{background-color:rgb(210,0,0)!important}
+.mutate-type-熔火冥獄,.mutate-type-熔火冥狱,.mutate-type-Crucible{background-color:rgb(255,115,57)!important}
+.mutate-type-偽屬性,.mutate-type-伪属性,.mutate-type-Pseudo{background-color:rgb(35,36,32)!important}

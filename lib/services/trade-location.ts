@@ -1,3 +1,4 @@
+import { ext } from "../utilities/ext-api"
 import { get, writable } from "svelte/store"
 
 import type {
@@ -350,9 +351,9 @@ export class TradeLocationService {
     key: string,
     entry: TradeLocationHistoryStruct
   ): Promise<boolean> {
-    if (!hasValidExtensionContext() || !chrome.runtime?.sendMessage) return false
+    if (!hasValidExtensionContext() || !ext.runtime?.sendMessage) return false
     try {
-      const response = await chrome.runtime.sendMessage({
+      const response = await ext.runtime.sendMessage({
         query: "log-trade-history",
         key,
         entry,

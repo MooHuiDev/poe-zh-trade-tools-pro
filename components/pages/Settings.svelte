@@ -191,6 +191,12 @@
     }
   }
 
+  async function handleAutoFuzzyChange(autoFuzzySearch: boolean) {
+    if (!(await settings.updateAutoFuzzySearch(autoFuzzySearch))) {
+      flashMessages.alert(translate($languageStore, "settings.saveFailed"));
+    }
+  }
+
   async function handleBookmarkLayoutChange(
     compactActionsMenu: boolean,
     ultraCompactBookmarks = false
@@ -612,6 +618,21 @@
             </div>
           {/if}
         </div>
+      </section>
+
+      <section class="settings-section settings-section--wide">
+        <div class="settings-section__header-row">
+          <div class="section-heading">
+            <h3 class="section-title">{translate($languageStore, "settings.autoFuzzyTitle")}</h3>
+          </div>
+          <ToggleRow
+            checked={$settings.autoFuzzySearch}
+            label={translate($languageStore, "settings.autoFuzzyTitle")}
+            stateLabel={toggleSwitchLabel($settings.autoFuzzySearch)}
+            onToggle={() => handleAutoFuzzyChange(!$settings.autoFuzzySearch)}
+          />
+        </div>
+        <p class="section-description">{translate($languageStore, "settings.autoFuzzyDescription")}</p>
       </section>
 
       <section class="settings-section settings-section--wide">

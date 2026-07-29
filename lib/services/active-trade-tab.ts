@@ -1,14 +1,15 @@
+import { ext } from "../utilities/ext-api"
 import { hasValidExtensionContext, isExtensionContextInvalidatedError } from "../utilities/extension-context"
 
 const TRADE_URL_PATTERN = /^https:\/\/(?:(?:[^./]+\.)?pathofexile\.com|poe2\.kakaogames\.com)\/trade(?:2)?(?:\/|$)/i
 
 const getActiveTab = async () => {
-  if (!hasValidExtensionContext() || !chrome.tabs?.query) {
+  if (!hasValidExtensionContext() || !ext.tabs?.query) {
     return null
   }
 
   try {
-    const [tab] = await chrome.tabs.query({
+    const [tab] = await ext.tabs.query({
       active: true,
       currentWindow: true
     })
@@ -40,9 +41,9 @@ export const openUrlInActiveTab = async (url: string) => {
   const tab = await getActiveTab()
 
   // Background script / popup script case
-  if (hasValidExtensionContext() && chrome.tabs?.update && typeof tab?.id === "number") {
+  if (hasValidExtensionContext() && ext.tabs?.update && typeof tab?.id === "number") {
     try {
-      await chrome.tabs.update(tab.id, { url, active: true })
+      await ext.tabs.update(tab.id, { url, active: true })
       return
     } catch (error) {
       if (!isExtensionContextInvalidatedError(error)) {
@@ -64,13 +65,13 @@ export const openUrlInActiveTab = async (url: string) => {
 }
 
 // Open one URL in a NEW tab (leaving the current page intact). In the popup /
-// background context chrome.tabs.create is used directly; in a content-script
-// sidebar (no chrome.tabs) we ask the background to create it, falling back to
+// background context ext.tabs.create is used directly; in a content-script
+// sidebar (no ext.tabs) we ask the background to create it, falling back to
 // window.open for the single-tab case.
 export const openUrlInNewTab = async (url: string, active = true) => {
-  if (hasValidExtensionContext() && chrome.tabs?.create) {
+  if (hasValidExtensionContext() && ext.tabs?.create) {
     try {
-      await chrome.tabs.create({ url, active })
+      await ext.tabs.create({ url, active })
       return
     } catch (error) {
       if (!isExtensionContextInvalidatedError(error)) {
@@ -79,9 +80,9 @@ export const openUrlInNewTab = async (url: string, active = true) => {
     }
   }
 
-  if (hasValidExtensionContext() && chrome.runtime?.sendMessage) {
+  if (hasValidExtensionContext() && ext.runtime?.sendMessage) {
     try {
-      await chrome.runtime.sendMessage({ query: "open-urls-in-tabs", urls: [url], active })
+      await ext.runtime.sendMessage({ query: "open-urls-in-tabs", urls: [url], active })
       return
     } catch (error) {
       if (!isExtensionContextInvalidatedError(error)) {
@@ -102,10 +103,10 @@ export const openUrlsInNewTabs = async (urls: string[]) => {
   const cleaned = urls.filter((url) => typeof url === "string" && url.length > 0)
   if (cleaned.length === 0) return
 
-  if (hasValidExtensionContext() && chrome.tabs?.create) {
+  if (hasValidExtensionContext() && ext.tabs?.create) {
     try {
       for (const url of cleaned) {
-        await chrome.tabs.create({ url, active: false })
+        await ext.tabs.create({ url, active: false })
       }
       return
     } catch (error) {
@@ -115,9 +116,9 @@ export const openUrlsInNewTabs = async (urls: string[]) => {
     }
   }
 
-  if (hasValidExtensionContext() && chrome.runtime?.sendMessage) {
+  if (hasValidExtensionContext() && ext.runtime?.sendMessage) {
     try {
-      await chrome.runtime.sendMessage({ query: "open-urls-in-tabs", urls: cleaned, active: false })
+      await ext.runtime.sendMessage({ query: "open-urls-in-tabs", urls: cleaned, active: false })
       return
     } catch (error) {
       if (!isExtensionContextInvalidatedError(error)) {
@@ -134,12 +135,12 @@ export const openUrlsInNewTabs = async (urls: string[]) => {
 export const sendMessageToActiveTradeTab = async <T>(message: unknown) => {
   const tab = await getActiveTradeTab()
 
-  if (!tab?.id || !hasValidExtensionContext() || !chrome.tabs?.sendMessage) {
+  if (!tab?.id || !hasValidExtensionContext() || !ext.tabs?.sendMessage) {
     return null
   }
 
   try {
-    return await chrome.tabs.sendMessage(tab.id, message) as T
+    return await ext.tabs.sendMessage(tab.id, message) as T
   } catch (error) {
     if (!isExtensionContextInvalidatedError(error)) {
       console.warn("[Poe Zh Trade Tools Pro] Failed to send message to active trade tab", error)

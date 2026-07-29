@@ -1,3 +1,4 @@
+import { ext } from "../utilities/ext-api"
 /**
  * Shared gate for the trade-site translation layer.
  *
@@ -28,7 +29,7 @@ export interface TradeTranslationState {
 
 const readAppSettings = async (): Promise<Record<string, unknown>> => {
   try {
-    const res = await chrome.storage.local.get(APP_SETTINGS_KEY)
+    const res = await ext.storage.local.get(APP_SETTINGS_KEY)
     const payload = (res as Record<string, unknown>)?.[APP_SETTINGS_KEY] as
       | Record<string, unknown>
       | undefined

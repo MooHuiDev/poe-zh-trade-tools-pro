@@ -1,3 +1,4 @@
+import { ext } from "../utilities/ext-api"
 import { hasValidExtensionContext, isExtensionContextInvalidatedError } from "../utilities/extension-context";
 import { bookmarksService } from "./bookmarks";
 
@@ -40,18 +41,18 @@ const isManagedLocalStorageKey = (key: string) =>
   !LOCAL_STORAGE_EXCLUDED_PREFIXES.some((prefix) => key.startsWith(prefix));
 
 const getAppVersion = () => {
-  if (hasValidExtensionContext() && chrome.runtime?.getManifest) {
-    return chrome.runtime.getManifest().version;
+  if (hasValidExtensionContext() && ext.runtime?.getManifest) {
+    return ext.runtime.getManifest().version;
   }
 
   return "dev";
 };
 
 const readAllStorage = async () => {
-  if (!hasValidExtensionContext() || !chrome.storage?.local) return {};
+  if (!hasValidExtensionContext() || !ext.storage?.local) return {};
 
   try {
-    return await chrome.storage.local.get(null) as Record<string, StoragePayload>;
+    return await ext.storage.local.get(null) as Record<string, StoragePayload>;
   } catch (error) {
     if (!isExtensionContextInvalidatedError(error)) {
       console.warn("[Poe Zh Trade Tools Pro] Backup storage read failed", error);
@@ -61,15 +62,15 @@ const readAllStorage = async () => {
 };
 
 const writeStorage = async (values: Record<string, StoragePayload>) => {
-  if (!hasValidExtensionContext() || !chrome.storage?.local) return false;
+  if (!hasValidExtensionContext() || !ext.storage?.local) return false;
 
   try {
-    const current = await chrome.storage.local.get(null);
+    const current = await ext.storage.local.get(null);
     const keysToRemove = Object.keys(current).filter(isManagedStorageKey);
     if (keysToRemove.length > 0) {
-      await chrome.storage.local.remove(keysToRemove);
+      await ext.storage.local.remove(keysToRemove);
     }
-    await chrome.storage.local.set(values);
+    await ext.storage.local.set(values);
     return true;
   } catch (error) {
     if (!isExtensionContextInvalidatedError(error)) {

@@ -238,6 +238,8 @@ export const englishTranslations: Record<string, TranslationValue> = {
   "settings.equivalentRefreshUnavailable":
     "Open a trade league first to refresh the poe.ninja ratio.",
   "settings.quickFiltersTitle": "Quick Filter Presets",
+  "settings.autoFuzzyTitle": "Fuzzy Search by Default (~)",
+  "settings.autoFuzzyDescription": "Automatically prefix the stat-filter search box with ~ so it matches loosely. When off, you can still type ~ yourself.",
   "settings.quickFiltersDescription":
     "Show or hide preset buttons injected above the trade site's Stat Filters.",
   "settings.quickFiltersPlacementTitle": "Display location",

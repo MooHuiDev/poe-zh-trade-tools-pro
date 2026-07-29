@@ -1,3 +1,4 @@
+import { ext } from "../utilities/ext-api"
 import { dateDelta } from "../utilities/date-delta";
 import { hasValidExtensionContext, isExtensionContextInvalidatedError } from "../utilities/extension-context";
 import { emitPageDebug } from "../utilities/page-debug";
@@ -126,7 +127,7 @@ export class PoeNinjaService {
 
     let response: PoeNinjaExchangePayload | null = null;
     try {
-      response = await chrome.runtime.sendMessage({
+      response = await ext.runtime.sendMessage({
         query: "poe-ninja-exchange",
         game: version === "2" ? "poe2" : "poe1",
         resource

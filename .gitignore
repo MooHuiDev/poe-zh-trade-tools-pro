@@ -60,3 +60,6 @@ store/STORE-LISTING.md
 # local backup files
 *.bak
 *.bak*
+
+# scratch scrape files (not for publish)
+data/*-raw.json

@@ -1,3 +1,4 @@
+import { ext } from "../utilities/ext-api"
 import {
   hasValidExtensionContext,
   isExtensionContextInvalidatedError
@@ -73,12 +74,12 @@ export class StorageService {
   }
 
   private async read(key: string): Promise<StoragePayload | null> {
-    if (!hasValidExtensionContext() || !chrome.storage?.local) {
+    if (!hasValidExtensionContext() || !ext.storage?.local) {
       console.warn("Storage not available")
       return null
     }
     try {
-      const result = await chrome.storage.local.get([key])
+      const result = await ext.storage.local.get([key])
       const payload = result[key]
       return isStoragePayload(payload) ? payload : null
     } catch (error) {
@@ -109,12 +110,12 @@ export class StorageService {
   }
 
   private async write(key: string, value: StoragePayload): Promise<boolean> {
-    if (!hasValidExtensionContext() || !chrome.storage?.local) {
+    if (!hasValidExtensionContext() || !ext.storage?.local) {
       console.warn("Storage not available")
       return false
     }
     try {
-      await chrome.storage.local.set({ [key]: value })
+      await ext.storage.local.set({ [key]: value })
       return true
     } catch (error) {
       if (!isExtensionContextInvalidatedError(error)) {
@@ -125,12 +126,12 @@ export class StorageService {
   }
 
   private async remove(keys: string | string[]): Promise<boolean> {
-    if (!hasValidExtensionContext() || !chrome.storage?.local) {
+    if (!hasValidExtensionContext() || !ext.storage?.local) {
       console.warn("Storage not available")
       return false
     }
     try {
-      await chrome.storage.local.remove(keys)
+      await ext.storage.local.remove(keys)
       return true
     } catch (error) {
       if (!isExtensionContextInvalidatedError(error)) {

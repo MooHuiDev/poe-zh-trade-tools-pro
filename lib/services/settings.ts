@@ -31,6 +31,7 @@ export interface VersionSettings {
   showFinerFilters: boolean
   showQuickFilters: boolean
   quickFiltersPlacement: QuickFiltersPlacement
+  autoFuzzySearch: boolean
   compactActionsMenu: boolean
   ultraCompactBookmarks: boolean
   classicBookmarkTradeActions: BookmarkTradeActionId[]
@@ -76,6 +77,7 @@ const DEFAULT_VERSION_SETTINGS: VersionSettings = {
   showFinerFilters: true,
   showQuickFilters: true,
   quickFiltersPlacement: "page",
+  autoFuzzySearch: true,
   compactActionsMenu: false,
   ultraCompactBookmarks: false,
   classicBookmarkTradeActions: DEFAULT_CLASSIC_BOOKMARK_TRADE_ACTIONS,
@@ -191,6 +193,7 @@ function legacyVersionSettings(
     showFinerFilters: value?.showFinerFilters,
     showQuickFilters: value?.showQuickFilters,
     quickFiltersPlacement: value?.quickFiltersPlacement,
+    autoFuzzySearch: value?.autoFuzzySearch,
     compactActionsMenu: value?.compactActionsMenu,
     ultraCompactBookmarks: value?.ultraCompactBookmarks,
     classicBookmarkTradeActions: value?.classicBookmarkTradeActions,
@@ -243,9 +246,11 @@ async function loadVersionSettings(
 
   versionCache.set(version, next)
 
-  if (!stored) {
-    await storageService.setValue(versionSettingsKey(version), next)
-  }
+  // NOTE: we intentionally do NOT persist defaults here. Writing on a missing
+  // read let a context that momentarily read `null` overwrite another context's
+  // real settings with defaults (e.g. flipping autoFuzzySearch back to true),
+  // which showed up as the toggle "not sticking". Defaults are kept in memory
+  // and only persisted when the user actually changes a setting.
 
   return next
 }
@@ -357,6 +362,9 @@ export const settings = {
     quickFiltersPlacement: QuickFiltersPlacement
   ) {
     return saveVersion({ ...activeVersionSettings, quickFiltersPlacement })
+  },
+  async updateAutoFuzzySearch(autoFuzzySearch: boolean) {
+    return saveVersion({ ...activeVersionSettings, autoFuzzySearch })
   },
   async updateSidebarWidth(sidebarWidth: number) {
     return saveGlobal({ ...globalSettings, sidebarWidth })

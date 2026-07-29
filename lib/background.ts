@@ -1,3 +1,4 @@
+import { ext } from "./utilities/ext-api"
 import { storageService } from "./services/storage"
 import type { TradeLocationHistoryStruct } from "./types/trade-location"
 
@@ -91,7 +92,7 @@ export const registerBackgroundHandlers = () => {
 
   registered = true
 
-  chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
+  ext.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     if (!isBackgroundRequest(request)) {
       return false;
     }
@@ -125,7 +126,7 @@ export const registerBackgroundHandlers = () => {
       ;(async () => {
         for (const url of urls) {
           try {
-            await chrome.tabs.create({ url, active })
+            await ext.tabs.create({ url, active })
           } catch (err) {
             console.error("[Poe Zh Trade Tools Pro-BG] open tab failed:", { url, error: err })
           }

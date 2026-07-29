@@ -36,8 +36,8 @@ export default defineConfig({
   },
   manifest: () => ({
     name: "Poe Zh Trade Tools Pro",
-    version: "4.1.0",
-    version_name: "4.1.0",
+    version: "4.1.1",
+    version_name: "4.1.1",
     description:
       "Traditional/Simplified Chinese localization plus bookmarks, history and result tools for the Path of Exile trade site.",
     permissions: ["storage", "tabs", "unlimitedStorage"],
@@ -55,6 +55,15 @@ export default defineConfig({
     action: {
       default_title: "Poe Zh Trade Tools Pro",
       default_icon: iconMap
+    },
+    // Firefox (AMO / about:debugging). strict_min_version 128 because three
+    // content scripts use `world: "MAIN"`, which Firefox only supports from 128.
+    // Chrome ignores browser_specific_settings, so this is harmless there.
+    browser_specific_settings: {
+      gecko: {
+        id: "poe-zh-trade-tools-pro@moohui.dev",
+        strict_min_version: "128.0"
+      }
     }
   }),
   vite: () => ({

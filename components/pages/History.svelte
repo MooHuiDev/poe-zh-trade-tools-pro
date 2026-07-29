@@ -207,13 +207,15 @@
         {/each}
       </div>
 
-      <Button
-        label={translate($languageStore, "history.clear")}
-        theme="gold"
-        icon="✕"
-        onClick={clearHistory}
-        class="clear-button"
-      />
+      <div class="clear-button-bar">
+        <Button
+          label={translate($languageStore, "history.clear")}
+          theme="gold"
+          icon="✕"
+          onClick={clearHistory}
+          class="clear-button"
+        />
+      </div>
     {:else}
       <EmptyState
         iconHtml={historyIcon}
@@ -346,8 +348,20 @@
   white-space: nowrap;
 }
 
+/* Keep the Clear-History button pinned to the bottom of the panel so it's
+   reachable without scrolling through a long history. */
+.clear-button-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  margin-top: auto;
+  padding: 8px 0 4px;
+  background: #120f0d;
+  border-top: 1px solid rgba(163, 141, 109, 0.16);
+  box-shadow: 0 -8px 12px -8px rgba(0, 0, 0, 0.6);
+}
+
 :global(.clear-button) {
   width: 100%;
-  margin-top: 2px;
 }
 </style>

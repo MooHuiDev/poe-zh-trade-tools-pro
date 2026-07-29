@@ -211,6 +211,8 @@ export const simplifiedChineseTranslations: Record<string, TranslationValue> = {
   "settings.equivalentRefreshUnavailable":
     "请先打开一个交易联盟才能刷新 poe.ninja 汇率。",
   "settings.quickFiltersTitle": "快速筛选预设",
+  "settings.autoFuzzyTitle": "默认模糊搜索 (~)",
+  "settings.autoFuzzyDescription": "在词缀筛选的搜索框自动加上 ~,让搜索更宽松。关闭时仍可手动输入 ~。",
   "settings.quickFiltersDescription":
     "显示或隐藏注入在交易站属性筛选上方的预设按钮。",
   "settings.quickFiltersPlacementTitle": "显示位置",

@@ -211,6 +211,8 @@ export const traditionalChineseTranslations: Record<string, TranslationValue> = 
   "settings.equivalentRefreshUnavailable":
     "請先開啟一個交易聯盟才能重新整理 poe.ninja 匯率。",
   "settings.quickFiltersTitle": "快速篩選預設",
+  "settings.autoFuzzyTitle": "預設模糊搜尋 (~)",
+  "settings.autoFuzzyDescription": "在詞綴篩選的搜尋框自動加上 ~,讓搜尋更寬鬆。關閉時仍可手動輸入 ~。",
   "settings.quickFiltersDescription":
     "顯示或隱藏注入在交易站屬性篩選上方的預設按鈕。",
   "settings.quickFiltersPlacementTitle": "顯示位置",
