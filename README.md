@@ -36,7 +36,7 @@
 
 ### 安裝
 - Chrome 線上應用程式商店:https://chromewebstore.google.com/detail/poe-zh-trade-tools-pro/olebcconlpeiohdbglmhdggklbajcelc
-- Firefox 附加元件(AMO):**待審核**(審核通過後補上連結;想先用可到 [Releases](https://github.com/MooHuiDev/poe-zh-trade-tools-pro/releases) 下載 `firefox-mv3` 於 `about:debugging` 暫時載入)
+- Firefox 附加元件(AMO):https://addons.mozilla.org/zh-TW/firefox/addon/poe-zh-trade-tools-pro/
 - 從原始碼:見下方 **Build**,再到 `chrome://extensions` → 開發者模式 →
   載入未封裝項目,選 `build/chrome-mv3`。
 
@@ -61,7 +61,7 @@ search that works in both Chinese and English.
 
 ### Install
 - Chrome Web Store: https://chromewebstore.google.com/detail/poe-zh-trade-tools-pro/olebcconlpeiohdbglmhdggklbajcelc
-- Firefox Add-on (AMO): **pending review** (link added once approved; to try it now, grab the `firefox-mv3` build from [Releases](https://github.com/MooHuiDev/poe-zh-trade-tools-pro/releases) and load it temporarily via `about:debugging`)
+- Firefox Add-on (AMO): https://addons.mozilla.org/firefox/addon/poe-zh-trade-tools-pro/
 - From source: see **Build** below, then load `build/chrome-mv3` via
   `chrome://extensions` → Developer mode → Load unpacked.
 
