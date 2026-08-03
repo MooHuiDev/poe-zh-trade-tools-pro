@@ -22,7 +22,7 @@
 
 ## 中文
 
-**Poe Zh Trade Tools Pro** 是一個 Chrome 擴充,為流亡黯道官方交易站加入輔助側邊欄
+**Poe Zh Trade Tools Pro** 是一個 Chrome & FireFox 的擴充元件,為流亡黯道官方交易站加入輔助側邊欄
 與多項便利功能,並可選擇將交易站中文化(繁體或簡體),且中英雙向皆可搜尋。
 
 ### 功能
