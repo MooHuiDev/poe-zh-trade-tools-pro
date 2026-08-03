@@ -31,7 +31,7 @@
 - 結果工具:混沌石 / 神聖石 / 崇高石等值定價(透過 poe.ninja)、快速屬性 / 武器 /
   價格篩選預設
 - 可選的繁體 / 簡體中文化:篩選器、詞綴、物品名稱、通貨全面中文化,中英雙向皆可搜尋
-- 支援傳奇物品/技能寶石一鍵開啟 PoeDB(中文介面時)
+- 支援傳奇物品/技能寶石一鍵開啟 PoeDB、PoeWiki
 - 所有資料(書籤、歷史、設定)都留在本機
 
 ### 安裝
@@ -56,7 +56,7 @@ search that works in both Chinese and English.
   quick stat / weapon / price filter presets
 - Optional Traditional / Simplified Chinese localization of stat filters, item
   mods, item names and currencies — bilingual (Chinese + English) search
-- One-click PoeDB link on unique items & skill gems (Chinese interface)
+- One-click PoeDB / Poe Wiki links on unique items & skill gems
 - All data (bookmarks, history, settings) stays on your device
 
 ### Install
