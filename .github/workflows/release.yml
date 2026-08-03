@@ -32,15 +32,25 @@ jobs:
       - name: Build (Chrome)
         run: pnpm run build:chrome
 
-      - name: Package zip
+      - name: Package zip (Chrome)
         run: |
           cd build/chrome-mv3
           zip -r "../../poe-zh-trade-tools-pro-${GITHUB_REF_NAME}-chrome.zip" .
 
+      - name: Build (Firefox)
+        run: pnpm run build:firefox
+
+      - name: Package zip (Firefox)
+        run: |
+          cd build/firefox-mv3
+          zip -r "../../poe-zh-trade-tools-pro-${GITHUB_REF_NAME}-firefox.zip" .
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: poe-zh-trade-tools-pro-*-chrome.zip
+          files: |
+            poe-zh-trade-tools-pro-*-chrome.zip
+            poe-zh-trade-tools-pro-*-firefox.zip
           # Release notes are taken from RELEASE_NOTES.md in the repo root. Edit
           # that file (Chinese changelog) before tagging each version.
           body_path: RELEASE_NOTES.md

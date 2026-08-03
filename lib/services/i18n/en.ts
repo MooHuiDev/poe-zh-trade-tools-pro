@@ -28,6 +28,9 @@ export const englishTranslations: Record<string, TranslationValue> = {
   "layout.versionNoticeEyebrow": "New Version",
   "layout.versionNoticeMessage": ({ version }) =>
     `Poe Zh Trade Tools Pro was updated to ${version}.`,
+  "notice.dataUpdateEyebrow": "Localization update",
+  "notice.localizationDataUpdated": ({ version, note }) =>
+    `Localization data updated to ${version}${note ? ` — ${note}` : ""}.`,
   "layout.versionNoticeOpen": "What's New",
   "layout.versionNoticeClose": "Close new version message",
   "whatsNew.eyebrow": "Release Notes",
@@ -302,7 +305,7 @@ export const englishTranslations: Record<string, TranslationValue> = {
     "Include desecrated mods as normal modifiers. Craft of Exile does not currently support importing desecrated mods.",
   "settings.wikiTitle": "Wiki button",
   "settings.wikiBody":
-    "Add a W button to unique item results that opens the matching item page on the PoE wiki.",
+    "Add a W button to unique item and skill gem results that opens the matching page on the PoE Wiki (also works under the Chinese interface).",
   "settings.magebloodLegacyTitle": "Mageblood Legacy descriptions",
   "settings.magebloodLegacyBody":
     "Show the hidden effects for PoE2 Mageblood Legacy mods below the item, like notable descriptions.",
@@ -318,6 +321,10 @@ export const englishTranslations: Record<string, TranslationValue> = {
   "about.version": ({ version }) =>
     `Version ${version} • Based on Poe Trade Plus by KroxiLabs (MIT)`,
   "about.maintainer": "Localization & integration by",
+  "about.whatsNewTitle": "What's New",
+  "about.whatsNewDescription":
+    "See this version's release notes on GitHub.",
+  "about.whatsNewButton": "View release notes",
   "about.dataVersion": "Localization data",
   "bulk.empty":
     "No bulk sellers detected yet. Open a trade result list where the same seller appears more than once.",

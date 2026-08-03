@@ -28,6 +28,9 @@ const OVERRIDES: Record<string, string> = {
   全部: "所有",
   不能: "无法",
   颗: "个",
+  // Skill / gem name renames (国服 uses different wording than 台服; distinctive
+  // multi-char names, verified on poedb.tw/cn). Grow as more are confirmed.
+  力量穿引: "念动飞箭", // Kinetic Bolt
   // League / mechanic names (distinctive; appear in map & reward filters).
   // Cross-referenced directly from poedb tw vs cn page data.
   最后通牒: "致命贪婪",

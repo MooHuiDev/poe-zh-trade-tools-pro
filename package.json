@@ -17,6 +17,7 @@
     "test:bookmark-exports": "node --no-warnings --experimental-strip-types --test tests/bookmark-export-compatibility.test.mjs",
     "typecheck": "tsc --noEmit",
     "build:chrome": "node scripts/wxt-runner.cjs build",
+    "build:firefox": "node scripts/wxt-runner.cjs build -b firefox",
     "build": "pnpm run build:chrome",
     "version": "node scripts/bump-version.cjs",
     "zip:chrome": "node scripts/wxt-runner.cjs zip",

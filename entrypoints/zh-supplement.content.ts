@@ -1,5 +1,9 @@
 import { SUPPLEMENT_ZH_TW } from "~/lib/poe-zh-supplement/dict"
 import { SUPPLEMENT_ZH_CN } from "~/lib/poe-zh-supplement/dict-cn"
+import {
+  MERCENARY_SKILL_NAMES,
+  MERCENARY_SUPPORT_TW
+} from "~/lib/poe-zh-supplement/mercenary-names"
 import { UI_STRINGS } from "~/lib/poe-zh-core/ui-strings"
 import { tradeHosts } from "~/lib/config/trade-hosts"
 import { getTradeTranslationState } from "~/lib/services/trade-translation"
@@ -29,6 +33,7 @@ export default defineContentScript({
     const s = (value: string) => (cn ? toSimplified(value) : value)
     const ITEM_MAP_KEY = cn ? "zhSuppItemMapCn" : "zhSuppItemMap"
     const REVERSE_KEY = cn ? "zhCn_reverse" : "zhCore_reverse"
+    const MODMAP_KEY = cn ? "zhCore_cn_modmap" : "zhCore_modmap"
 
     const SKIP_TAGS = new Set([
       "SCRIPT",
@@ -74,6 +79,88 @@ export default defineContentScript({
     const lookup = (key: string) =>
       DICT[key] || dynamicMap[key] || UI_PHRASES[key] || UI_MAP[key]
 
+    // Mercenary Warrant skill block (`.item-mod--mercenary`): each skill lists its
+    // granted supports as bare "<Support> (Tier N)" spans, e.g. "Faster Casting"
+    // + "Tier 2", with a "Greater " prefix for the stronger tier. These short
+    // labels are the support-gem names minus "Support", so they don't hit the
+    // item map directly. Resolve order: curated table -> item map (skills) ->
+    // "<name> Support" in the item map with the 輔助 suffix stripped.
+    const MERC_MAP: Record<string, string> = {}
+    for (const [en, zh] of Object.entries(MERCENARY_SUPPORT_TW)) {
+      MERC_MAP[normalize(en)] = s(zh)
+    }
+    // Authoritative mercenary SKILL names (poedb /Mercenaries), per language.
+    // Mercenary skills use their own names, distinct from the regular gem names
+    // and differing per language (Wrath: 繁 暴怒 / 简 雷霆), so this must win over
+    // the gem/item map. Keys are already normalized English.
+    const MERC_SKILL: Record<string, string> = {}
+    for (const [k, v] of Object.entries(MERCENARY_SKILL_NAMES)) {
+      MERC_SKILL[k] = cn ? v.cn : v.tw
+    }
+    // Complete, OFFICIAL Mercenary Warrant support/skill names, derived at runtime
+    // from the background-built stat modmap (`zhCore_modmap` / cn variant). That
+    // map pairs the pathofexile.tw "傭兵" stat group (534 entries) with the English
+    // one by id, so every "<name> (Tier N)" carries both languages. We strip the
+    // "(Tier N)" / "（階級 N）" suffix and key by normalized English base name; the
+    // "Greater/Lesser/Gilded" qualifier stays part of the name (as the game does).
+    let mercNameMap: Record<string, string> = {}
+    const TIER_EN = /\s*\(Tier \d+\)\s*$/i
+    const TIER_ZH = /\s*[（(]\s*(?:階級|阶级|Tier)\s*\d+\s*[)）]\s*$/i
+    const buildMercNameMap = (
+      modmap: Record<string, { us?: string; tw?: string }> | undefined
+    ) => {
+      const next: Record<string, string> = {}
+      for (const [id, info] of Object.entries(modmap || {})) {
+        if (!id.startsWith("mercenary.") || !info?.us || !info?.tw) continue
+        const key = normalize(info.us.replace(TIER_EN, "").trim())
+        const zh = info.tw.replace(TIER_ZH, "").trim()
+        if (key && zh && !(key in next)) next[key] = zh
+      }
+      mercNameMap = next
+    }
+    const stripSupportSuffix = (zh: string | undefined) =>
+      zh ? zh.replace(/(輔助|支援|辅助)$/, "").trim() : undefined
+    const resolveMercName = (name: string): string | undefined => {
+      const key = normalize(name)
+      // Priority:
+      // 1. MERC_SKILL — authoritative mercenary skill names (poedb /Mercenaries),
+      //    correct per language and distinct from gem names (Wrath 繁 暴怒 / 简 雷霆).
+      // 2. dynamicMap / DICT — the item & skill-gem name maps (国服 authentic etc.)
+      //    for anything not in the mercenary skill list.
+      // 3. mercNameMap / MERC_MAP — the tiered support labels from the 傭兵 stat
+      //    group (and the small curated fallback).
+      // 4. derive a support name from "<name> Support" in the item map.
+      return (
+        MERC_SKILL[key] ||
+        dynamicMap[key] ||
+        DICT[key] ||
+        mercNameMap[key] ||
+        MERC_MAP[key] ||
+        stripSupportSuffix(dynamicMap[key + "support"])
+      )
+    }
+    // Translate a single mercenary-skill span's text, or return undefined to keep
+    // it in English (progressive coverage — unknown labels are left untouched).
+    const translateMercSpan = (text: string): string | undefined => {
+      const tier = text.match(/^Tier (\d+)$/)
+      if (tier) return s(`階級 ${tier[1]}`)
+      // The official map holds whole names ("Greater X", "Lesser X", "Gilded X").
+      const direct = resolveMercName(text)
+      if (direct) return direct
+      // Fallback only when the official map hasn't loaded yet: peel a qualifier.
+      const g = text.match(/^Greater (.+)$/)
+      if (g) {
+        const zh = resolveMercName(g[1])
+        if (zh) return `${s("高階")}${zh}`
+      }
+      const l = text.match(/^Lesser (.+)$/)
+      if (l) {
+        const zh = resolveMercName(l[1])
+        if (zh) return `${s("次級")}${zh}`
+      }
+      return undefined
+    }
+
     const translateTextNode = (node: Text) => {
       const raw = node.nodeValue
       if (!raw) return
@@ -81,6 +168,14 @@ export default defineContentScript({
       // Allow 2-char values like "No"; still skip empty/1-char and anything
       // that already contains Chinese.
       if (!trimmed || trimmed.length < 2 || hasChinese(trimmed)) return
+      // Mercenary Warrant skill spans get their own resolver (Tier / Greater /
+      // support-name derivation). Handled here and returned so the generic
+      // item-name lookup below doesn't mangle these compact labels.
+      if (node.parentElement?.closest?.(".item-mod--mercenary")) {
+        const mercZh = translateMercSpan(trimmed)
+        if (mercZh && mercZh !== trimmed) node.nodeValue = raw.replace(trimmed, mercZh)
+        return
+      }
       const zh = lookup(normalize(trimmed))
       if (!zh || zh === trimmed) return
       // Inside filter dropdown options, keep the English in parentheses so it
@@ -159,12 +254,18 @@ export default defineContentScript({
     // re-scan when it becomes available or updates.
     try {
       chrome.storage?.local?.get(
-        [ITEM_MAP_KEY, REVERSE_KEY],
+        [ITEM_MAP_KEY, REVERSE_KEY, MODMAP_KEY],
         (result) => {
           const r = result as Record<string, unknown>
           const map = r?.[ITEM_MAP_KEY] as Record<string, string> | undefined
+          const modmap = r?.[MODMAP_KEY] as
+            | Record<string, { us?: string; tw?: string }>
+            | undefined
+          if (modmap && typeof modmap === "object") buildMercNameMap(modmap)
           if (map && typeof map === "object") {
             dynamicMap = map
+            runFullPass()
+          } else if (modmap && typeof modmap === "object") {
             runFullPass()
           }
           const rev = r?.[REVERSE_KEY] as Record<string, string> | undefined
@@ -172,7 +273,17 @@ export default defineContentScript({
         }
       )
       chrome.storage?.onChanged?.addListener((changes, area) => {
-        if (area === "local" && changes[ITEM_MAP_KEY]) {
+        if (area !== "local") return
+        if (changes[MODMAP_KEY]) {
+          const next = changes[MODMAP_KEY].newValue as
+            | Record<string, { us?: string; tw?: string }>
+            | undefined
+          if (next && typeof next === "object") {
+            buildMercNameMap(next)
+            runFullPass()
+          }
+        }
+        if (changes[ITEM_MAP_KEY]) {
           const next = changes[ITEM_MAP_KEY].newValue as
             | Record<string, string>
             | undefined
@@ -288,10 +399,26 @@ export default defineContentScript({
         if (!hasChinese(body)) return
         const english = reverseMap[body]
         if (!english) return
-        const next = prefix + english
-        if (next === raw) return
-        nativeInputValueSetter?.call(target, next)
-        target.dispatchEvent(new Event("input", { bubbles: true }))
+        const widget = target.closest(".multiselect")
+        // DEFER the decision: let vue-multiselect finish filtering its options for
+        // what was typed, THEN decide. Our dropdowns are bilingual "中文 (English)",
+        // so typing Chinese normally matches directly — in that case do NOTHING
+        // (converting to English here is what made the box "force-switch" to
+        // English, e.g. 雷霆 -> WRATH). Only when the Chinese matches NO option (a
+        // pure-English option list, e.g. some reward dropdowns) do we reverse-
+        // translate so the search can find it.
+        window.setTimeout(() => {
+          if (target.value !== raw) return // user kept typing; this run is stale
+          const opts = widget?.querySelectorAll(".multiselect__option")
+          const matched =
+            !!opts &&
+            Array.from(opts).some((o) => (o.textContent || "").includes(body))
+          if (matched) return
+          const next = prefix + english
+          if (next === target.value) return
+          nativeInputValueSetter?.call(target, next)
+          target.dispatchEvent(new Event("input", { bubbles: true }))
+        }, 60)
       },
       true
     )

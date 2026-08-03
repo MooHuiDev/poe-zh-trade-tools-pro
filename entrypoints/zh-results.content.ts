@@ -74,11 +74,59 @@ export default defineContentScript({
       )
       const lineSpans = spans.length ? spans : [field]
 
-      // Pass 1: the complete template dictionary (clean, comprehensive — covers
-      // multi-line, non-filterable, and option mods whose rendered text already
-      // has the option filled in).
+      // Pass 0: multi-line templates FIRST. A single stat can render across
+      // several line-spans but is stored as ONE combined template (its key keeps
+      // the line break: the source "\n" normalizes to an "n" between halves; the
+      // value keeps a "\n"/"\" separator). This must run BEFORE the per-line pass,
+      // otherwise a half whose text also has a standalone entry gets translated on
+      // its own and the pair can no longer be reconstructed. We join consecutive
+      // still-English spans, match the combined template (longest window first so
+      // a 3-line stat isn't half-matched), fill the numbers across the whole
+      // thing, then split the translation back onto each span.
+      const doneSpans = new Set<HTMLElement>()
+      {
+        let i = 0
+        while (i < lineSpans.length) {
+          const first = lineSpans[i].textContent?.trim()
+          if (!first || hasChinese(first)) {
+            i++
+            continue
+          }
+          let j = i
+          while (j < lineSpans.length) {
+            const t = lineSpans[j].textContent?.trim()
+            if (!t || hasChinese(t)) break
+            j++
+          }
+          const run = lineSpans.slice(i, j)
+          if (run.length >= 2) {
+            matchRun: for (let len = run.length; len >= 2; len--) {
+              for (let start = 0; start + len <= run.length; start++) {
+                const window = run.slice(start, start + len)
+                if (window.some((s) => doneSpans.has(s))) continue
+                const joined = window
+                  .map((s) => (s.textContent || "").trim())
+                  .join("\\n")
+                const t = translateByTemplate(joined)
+                if (!t || t === joined) continue
+                const parts = t.split(/\\n?/)
+                if (parts.length !== window.length) continue
+                window.forEach((s, k) => {
+                  s.textContent = resolveKw(parts[k])
+                  doneSpans.add(s)
+                })
+                break matchRun
+              }
+            }
+          }
+          i = j
+        }
+      }
+
+      // Pass 1: per-line template dictionary for spans not handled above.
       const remaining: HTMLElement[] = []
       for (const span of lineSpans) {
+        if (doneSpans.has(span)) continue
         const rendered = span.textContent?.trim()
         if (!rendered || hasChinese(rendered)) continue
         const t = translateByTemplate(rendered)

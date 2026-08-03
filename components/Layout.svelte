@@ -13,7 +13,6 @@ import Settings from "./pages/Settings.svelte";
 import About from "./pages/About.svelte";
   import FinerFilters from "./FinerFilters.svelte";
   import SvgIcon from "./SvgIcon.svelte";
-  import WhatsNewDialog from "./WhatsNewDialog.svelte";
   import logoUrl from "~assets/logo.webp?inline";
   import { flashMessages } from "../lib/services/flash";
   import { bookmarksService } from "../lib/services/bookmarks";
@@ -31,6 +30,7 @@ import About from "./pages/About.svelte";
   const ONBOARDING_SEEN_KEY = "layout-onboarding-seen";
   const ONBOARDING_FOLDER_ID_KEY = "layout-onboarding-folder-id";
   const VERSION_NOTICE_SEEN_KEY = "layout-version-notice-seen";
+  const DATA_VERSION_NOTICE_SEEN_KEY = "layout-data-version-seen";
 
   let currentPage: 'bookmarks' | 'bulk' | 'history' | 'about' | 'settings' = $state('bookmarks');
   let currentTradeVersion: "1" | "2" = $state(tradeLocationService.current.version);
@@ -58,7 +58,9 @@ import About from "./pages/About.svelte";
     : "dev");
   let isDevBuild = $state(import.meta.env.DEV);
   let showVersionNotice = $state(false);
-  let showWhatsNew = $state(false);
+  let showDataNotice = $state(false);
+  let dataNoticeVersion = $state("");
+  let dataNoticeNote = $state("");
 
   const MIN_SIDEBAR_WIDTH = 300;
   const MAX_SIDEBAR_WIDTH = 560;
@@ -204,6 +206,28 @@ import About from "./pages/About.svelte";
         storageService.setLocalValue(VERSION_NOTICE_SEEN_KEY, appVersion);
       }
     }
+    // Localization-data update reminder. The translation dictionaries are
+    // re-fetched in the background (~every 8h); `zhDataVersion` reflects the
+    // dictionaries' version. When it changes, show a one-time toast so users know
+    // the Chinese data was refreshed (no toast on first run — just record it).
+    if (hasValidExtensionContext()) {
+      chrome.storage?.local?.get(["zhDataVersion", "zhDataVersionNote"], (r) => {
+        const data = r as { zhDataVersion?: string; zhDataVersionNote?: string };
+        const dv = data?.zhDataVersion;
+        if (!dv) return;
+        const seen = storageService.getLocalValue(DATA_VERSION_NOTICE_SEEN_KEY);
+        if (seen && seen !== dv) {
+          // Show a top banner (same spot as the app-update notice). Kept until the
+          // user dismisses it; "seen" is only recorded on dismiss. The message is
+          // built reactively in the template so it follows the current language.
+          dataNoticeVersion = dv;
+          dataNoticeNote = data?.zhDataVersionNote || "";
+          showDataNotice = true;
+        } else if (!seen) {
+          storageService.setLocalValue(DATA_VERSION_NOTICE_SEEN_KEY, dv);
+        }
+      });
+    }
     // Language is auto-detected from the browser locale, so the first-run
     // language-selection dialog is no longer shown; go straight to the tutorial.
     storageService.setLocalValue(WELCOME_SEEN_KEY, "true");
@@ -248,14 +272,29 @@ import About from "./pages/About.svelte";
     }
   };
 
-  const openWhatsNew = () => {
-    showWhatsNew = true;
+  const dismissDataNotice = () => {
+    showDataNotice = false;
+    if (dataNoticeVersion) {
+      storageService.setLocalValue(DATA_VERSION_NOTICE_SEEN_KEY, dataNoticeVersion);
+    }
   };
 
-  const closeWhatsNew = () => {
-    showWhatsNew = false;
+  const releaseNotesUrl = () =>
+    appVersion && appVersion !== "dev"
+      ? `https://github.com/MooHuiDev/poe-zh-trade-tools-pro/releases/tag/v${appVersion}`
+      : "https://github.com/MooHuiDev/poe-zh-trade-tools-pro/releases";
+
+  // Both the update banner and the About "What's New" entry now open the GitHub
+  // release page for this version instead of the built-in (original-author) notes.
+  const openWhatsNew = () => {
+    window.open(releaseNotesUrl(), "_blank", "noopener,noreferrer");
+  };
+
+  const openReleaseNotes = () => {
+    window.open(releaseNotesUrl(), "_blank", "noopener,noreferrer");
     dismissVersionNotice();
   };
+
 
   const handleOnboardingStepChange = (
     page: 'bookmarks' | 'bulk' | 'history' | 'about' | 'settings',
@@ -381,6 +420,13 @@ import About from "./pages/About.svelte";
       </div>
       <button
         type="button"
+        class="version-notice__open"
+        onclick={openReleaseNotes}
+      >
+        {translate($languageStore, "layout.versionNoticeOpen")}
+      </button>
+      <button
+        type="button"
         class="version-notice__close"
         aria-label={translate($languageStore, "layout.versionNoticeClose")}
         onclick={dismissVersionNotice}
@@ -389,7 +435,31 @@ import About from "./pages/About.svelte";
       </button>
     </div>
   {/if}
-  
+
+  {#if showDataNotice}
+    <div class="version-notice" role="status" aria-live="polite">
+      <div class="version-notice__copy">
+        <span class="version-notice__eyebrow">
+          {translate($languageStore, "notice.dataUpdateEyebrow")}
+        </span>
+        <p class="version-notice__text">
+          {translate($languageStore, "notice.localizationDataUpdated", {
+            version: dataNoticeVersion,
+            note: dataNoticeNote
+          })}
+        </p>
+      </div>
+      <button
+        type="button"
+        class="version-notice__close"
+        aria-label={translate($languageStore, "layout.versionNoticeClose")}
+        onclick={dismissDataNotice}
+      >
+        ×
+      </button>
+    </div>
+  {/if}
+
   <nav class="main-nav">
     <button 
         class="nav-item {currentPage === 'bookmarks' ? 'is-active' : ''} {showOnboarding && onboardingHighlightedPage === 'bookmarks' ? 'is-onboarding-focus' : ''}" 
@@ -479,11 +549,6 @@ import About from "./pages/About.svelte";
     showEquivalentStep={true}
     onClose={closeOnboarding}
     onStepChange={handleOnboardingStepChange} />
-
-  <WhatsNewDialog
-    open={showWhatsNew}
-    version={appVersion}
-    onClose={closeWhatsNew} />
 </div>
 
 {#if isMinimized}

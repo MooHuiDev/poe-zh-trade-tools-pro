@@ -30,6 +30,7 @@ export const UI_STRINGS: Record<string, string> = {
   "Weighted Sum": "權重總計",
   "Weighted Sum v2": "加權總和版本2",
   "Crucible Passive Tree Path": "熔火天賦樹徑",
+  "Mercenary Skill Group": "傭兵技能組",
   "Min": "最小",
   "Max": "最大",
 

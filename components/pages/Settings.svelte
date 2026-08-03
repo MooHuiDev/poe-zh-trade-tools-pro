@@ -938,7 +938,9 @@
             />
           </div>
         {/if}
+        {/if}
 
+        {#if $settings.language === "en" || $settings.language === "zh-tw" || $settings.language === "zh-cn"}
         <div class="settings-row">
           <div class="settings-row__copy">
             <div class="settings-row__title">{translate($languageStore, "settings.wikiTitle")}</div>
@@ -953,7 +955,7 @@
         </div>
         {/if}
 
-        {#if $settings.language === "zh-tw" || $settings.language === "zh-cn"}
+        {#if $settings.language === "en" || $settings.language === "zh-tw" || $settings.language === "zh-cn"}
         <div class="settings-row">
           <div class="settings-row__copy">
             <div class="settings-row__title">{translate($languageStore, "settings.poedbTitle")}</div>

@@ -36,8 +36,8 @@ export default defineConfig({
   },
   manifest: () => ({
     name: "Poe Zh Trade Tools Pro",
-    version: "4.1.1",
-    version_name: "4.1.1",
+    version: "4.1.2",
+    version_name: "4.1.2",
     description:
       "Traditional/Simplified Chinese localization plus bookmarks, history and result tools for the Path of Exile trade site.",
     permissions: ["storage", "tabs", "unlimitedStorage"],
@@ -62,7 +62,14 @@ export default defineConfig({
     browser_specific_settings: {
       gecko: {
         id: "poe-zh-trade-tools-pro@moohui.dev",
-        strict_min_version: "128.0"
+        strict_min_version: "128.0",
+        // AMO now REQUIRES this key for all new extensions. We collect no
+        // personal data (everything is stored locally), so declare "none".
+        // On Firefox < 140 this key is simply ignored (harmless); addons-linter
+        // emits a non-blocking min-version warning that AMO accepts.
+        data_collection_permissions: {
+          required: ["none"]
+        }
       }
     }
   }),

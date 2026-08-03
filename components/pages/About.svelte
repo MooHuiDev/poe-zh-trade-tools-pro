@@ -48,6 +48,15 @@
       onClick={onOpenTutorial} />
   </section>
 
+  <section class="about-section">
+    <h2>{translate($languageStore, "about.whatsNewTitle")}</h2>
+    <p>{translate($languageStore, "about.whatsNewDescription")}</p>
+    <Button
+      label={translate($languageStore, "about.whatsNewButton")}
+      theme="gold"
+      onClick={onOpenWhatsNew} />
+  </section>
+
   <footer class="about-footer">
     <p class="about-footer__credit">
       <a class="about-link" href="https://github.com/KroxiLabs/Kroxitrade" target="_blank" rel="noreferrer">

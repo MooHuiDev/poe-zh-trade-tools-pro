@@ -192,14 +192,16 @@ const isEnglishTradeHost = () => {
   return host === "www.pathofexile.com" || host === "pathofexile.com";
 };
 
-// PoeDB button: active only under Chinese interface languages. Returns the
-// poedb locale segment ("tw"/"cn") or null.
-const poedbLocale = (): "tw" | "cn" | null => {
-  const lang = settings.getCurrent().language;
-  if (lang === "zh-tw") return "tw";
-  if (lang === "zh-cn") return "cn";
-  return null;
+// PoeDB button: enabled where we can recover the English item name for the slug —
+// English (name is already English) and Chinese (via the zh reverse maps). Other
+// languages have no name->English mapping, so the button is not shown for them.
+const POEDB_LOCALE: Record<string, string> = {
+  en: "us",
+  "zh-tw": "tw",
+  "zh-cn": "cn"
 };
+const poedbLocale = (): string | null =>
+  POEDB_LOCALE[settings.getCurrent().language] ?? null;
 
 // Chinese-display unique name -> English name, needed to build the poedb slug
 // (poedb pages use the English item slug). Populated from the translation core's
@@ -272,12 +274,7 @@ export class ItemResultsService {
       return;
     }
 
-    if (
-      wikiButton &&
-      experimentalSettings.isWikiVisible() &&
-      isEnglishTradeHost() &&
-      settings.getCurrent().language === "en"
-    ) {
+    if (wikiButton && experimentalSettings.isWikiVisible()) {
       event.preventDefault();
       event.stopImmediatePropagation();
 
@@ -809,12 +806,9 @@ export class ItemResultsService {
 
     const existingButton = left.querySelector<HTMLButtonElement>("button.bt-open-wiki");
     const searchByButton = left.querySelector<HTMLButtonElement>("button.searchBy");
-    const wikiUrl =
-      experimentalSettings.isWikiVisible() &&
-      isEnglishTradeHost() &&
-      settings.getCurrent().language === "en"
-        ? this.getUniqueItemWikiUrl(row)
-        : null;
+    const wikiUrl = experimentalSettings.isWikiVisible()
+      ? this.getUniqueItemWikiUrl(row)
+      : null;
 
     if (!wikiUrl) {
       existingButton?.remove();
@@ -932,18 +926,36 @@ export class ItemResultsService {
   }
 
   private getUniqueItemWikiUrl(row: HTMLElement) {
-    const header = row.querySelector<HTMLElement>(".item-popup__header--unique");
-    const name = header
+    if (!experimentalSettings.isWikiVisible()) return null;
+
+    // Uniques AND skill gems have poewiki pages (keyed by the English name), so
+    // show the button for both — same coverage as the PoeDB button.
+    const header = row.querySelector<HTMLElement>(
+      ".item-popup__header--unique, .item-popup__header--gem"
+    );
+    const raw = header
       ?.querySelector<HTMLElement>(".item-popup__header-line")
       ?.textContent
       ?.trim();
+    if (!raw) return null;
 
-    if (!name) return null;
+    // Recover the English name so the button works under the Chinese interface
+    // too (the header may be English, bilingual "中文 (English)", or pure Chinese
+    // when translated). Same reverse-map approach the PoeDB button uses.
+    let english: string | undefined;
+    const paren = raw.match(/\(([A-Za-z0-9][A-Za-z0-9 '’,.\-]*)\)\s*$/);
+    if (paren) english = paren[1].trim();
+    if (!english) {
+      const rev = poedbLocale() === "cn" ? cnNameReverse : twNameReverse;
+      english = rev[raw] || rev[raw.split(" (")[0].trim()];
+    }
+    if (!english && /^[\x20-\x7E]+$/.test(raw)) english = raw;
+    if (!english) return null;
 
     const baseUrl = tradeLocationService.current.version === "2"
       ? "https://www.poe2wiki.net/wiki/"
       : "https://www.poewiki.net/wiki/";
-    const pageName = encodeURIComponent(name.replace(/\s+/g, "_")).replace(/'/g, "%27");
+    const pageName = encodeURIComponent(english.replace(/\s+/g, "_")).replace(/'/g, "%27");
     return `${baseUrl}${pageName}`;
   }
 

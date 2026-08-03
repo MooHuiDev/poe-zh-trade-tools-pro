@@ -598,6 +598,9 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
     payload.zhCore_cn_items = cnItems
     payload.zhCn_reverse = cnReverse
     payload.zhDataVersion = remoteDict?.version || BUNDLED_DATA_VERSION
+    // Optional short note shown alongside the "localization data updated" toast.
+    payload.zhDataVersionNote =
+      (remoteDict as { versionNote?: string })?.versionNote || ""
 
     await writeStorage(payload)
     console.log(

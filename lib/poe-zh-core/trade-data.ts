@@ -82,6 +82,40 @@ const readTimestamp = (): Promise<number> =>
 const writeStorage = (data: Record<string, unknown>): Promise<void> =>
   new Promise((resolve) => chrome.storage.local.set(data, () => resolve()))
 
+// The authentic 国服 item/skill-gem name map (normalized English -> 国服 name),
+// built by the item-map background pass. Used to override 傭兵 skill names in the
+// Simplified stat filter, where the generic 台服->国服 char conversion keeps 台服
+// wording for renamed skills (e.g. Galvanic Arrow: OpenCC 电流箭矢, 国服 电能之箭).
+const readCnNameMap = (): Promise<Record<string, string>> =>
+  new Promise((resolve) =>
+    chrome.storage.local.get(["zhSuppItemMapCn"], (v) =>
+      resolve((v.zhSuppItemMapCn as Record<string, string>) || {})
+    )
+  )
+
+const normName = (value: string): string =>
+  value.toLowerCase().replace(/[^a-z0-9]/g, "")
+
+// Replace 傭兵-group skill names in the built Simplified stats with the authentic
+// 国服 name, matched by the English shown in "中文 (English)". Only skill entries
+// (no "(Tier N)" — i.e. no nested parens in the English) are touched; support
+// tiers are left as-is.
+const applyCnMercenarySkillNames = (
+  cnStats: StatGroup[],
+  cnNames: Record<string, string>
+): void => {
+  if (!cnNames || Object.keys(cnNames).length === 0) return
+  for (const group of cnStats) {
+    if (group.id !== "mercenary") continue
+    for (const entry of group.entries ?? []) {
+      const m = entry.text?.match(/^(.+) \(([^()]+)\)$/)
+      if (!m) continue
+      const authentic = cnNames[normName(m[2])]
+      if (authentic && authentic !== m[1]) entry.text = `${authentic} (${m[2]})`
+    }
+  }
+}
+
 const fetchResult = async (url: string): Promise<unknown[] | null> => {
   const response = await fetch(url, { credentials: "omit" })
   if (!response.ok) throw new Error(`${url} -> ${response.status}`)
@@ -317,6 +351,10 @@ export const refreshTradeData = async (force = false): Promise<void> => {
         out.zhCore_cn_stats = convertDeep(
           buildStats(twStats, usStats, statTpl?.cn)
         )
+        // Override 傭兵 skill names with authentic 国服 names (matched by English),
+        // covering every renamed skill automatically without a manual list.
+        const cnNames = await readCnNameMap()
+        applyCnMercenarySkillNames(out.zhCore_cn_stats as StatGroup[], cnNames)
         out.zhCore_modmap = buildModMap(twStats, usStats)
       }
     } catch (e) {

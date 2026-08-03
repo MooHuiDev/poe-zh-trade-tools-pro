@@ -28,6 +28,9 @@ export const simplifiedChineseTranslations: Record<string, TranslationValue> = {
   "layout.versionNoticeEyebrow": "新版本",
   "layout.versionNoticeMessage": ({ version }) =>
     `Poe Zh Trade Tools Pro 已更新至 ${version}。`,
+  "notice.dataUpdateEyebrow": "中文化更新",
+  "notice.localizationDataUpdated": ({ version, note }) =>
+    `中文化数据已更新至 ${version}${note ? `（${note}）` : ""}。`,
   "layout.versionNoticeOpen": "更新内容",
   "layout.versionNoticeClose": "关闭新版本消息",
   "whatsNew.eyebrow": "更新说明",
@@ -275,7 +278,7 @@ export const simplifiedChineseTranslations: Record<string, TranslationValue> = {
     "将亵渎词缀视为一般词缀一并包含。Craft of Exile 目前不支持导入亵渎词缀。",
   "settings.wikiTitle": "Wiki 按钮",
   "settings.wikiBody":
-    "在传奇物品结果加入 W 按钮，打开 PoE wiki 上对应的物品页面。",
+    "在传奇物品与技能宝石结果加入 W 按钮，打开 PoE Wiki 上对应的页面（中文界面下也可使用）。",
   "settings.magebloodLegacyTitle": "法师之血传承描述",
   "settings.magebloodLegacyBody":
     "在物品下方显示 PoE2 法师之血传承词缀的隐藏效果，例如显著词缀的描述。",
@@ -290,6 +293,9 @@ export const simplifiedChineseTranslations: Record<string, TranslationValue> = {
   "about.version": ({ version }) =>
     `版本 ${version} • 基于 KroxiLabs 的 Poe Trade Plus（MIT 授权）`,
   "about.maintainer": "中文化与整合",
+  "about.whatsNewTitle": "更新内容",
+  "about.whatsNewDescription": "在 GitHub 查看这个版本的更新说明。",
+  "about.whatsNewButton": "查看更新内容",
   "about.dataVersion": "中文化数据版本",
   "bulk.empty":
     "尚未侦测到大宗卖家。请打开同一卖家出现超过一次的交易结果列表。",
