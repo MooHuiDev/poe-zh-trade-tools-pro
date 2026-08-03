@@ -24,6 +24,13 @@ ALWAYS prefer MCP graph tools over grep/glob/file-search for code discovery.
 
 # Extension Rules
 
+## Terminology / Casing (standard names)
+- Always write these two product names in this exact casing in **any user-facing / display text** (README, RELEASE_NOTES, What's New, i18n strings, UI labels, docs, commit messages, GitHub):
+  - **PoEDB** — never `PoeDB`, `Poedb`, `PoEDb`, `poedb`, `POEDB`.
+  - **PoE Wiki** — never `PoeWiki`, `Poe wiki`, `Poe Wiki`, `PoEwiki`, `poe wiki`.
+- If the user (or any source text) types one of these wrong, silently correct it to the standard form — no need to ask.
+- **Do NOT rewrite** non-display occurrences: code identifiers/variables (e.g. `poedbLocale`, `POEDB_LOCALE`), CSS classes, and URLs such as `poedb.tw` stay exactly as written.
+
 ## Translations
 - Every new user-facing text created for this extension must be added for every supported language by default.
 - Do not add UI text only to English or Spanish and rely on fallback text.
