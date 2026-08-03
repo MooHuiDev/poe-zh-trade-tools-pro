@@ -33,7 +33,7 @@ export const frenchTranslations: Record<string, TranslationValue> = {
   "popup.shortcut.poe2Wiki": "Path of Exile 2 Wiki",
   "popup.shortcut.craftPoe1": "Craft of Exile PoE 1",
   "popup.shortcut.craftPoe2": "Craft of Exile PoE 2",
-  "popup.shortcut.poedb": "PoEDb",
+  "popup.shortcut.poedb": "PoEDB",
   "popup.shortcut.poe2db": "PoE2Db",
   "popup.shortcut.ninja": "poe.ninja",
   "settings.tabs.interface": "Général",
