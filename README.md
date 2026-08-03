@@ -37,9 +37,9 @@
 ### 安裝
 - Chrome 線上應用程式商店:https://chromewebstore.google.com/detail/poe-zh-trade-tools-pro/olebcconlpeiohdbglmhdggklbajcelc
 - Firefox 附加元件(AMO):https://addons.mozilla.org/zh-TW/firefox/addon/poe-zh-trade-tools-pro/
-- 從原始碼:見下方 **Build**,再到 `chrome://extensions` → 開發者模式 →
-  載入未封裝項目,選 `build/chrome-mv3`;Firefox 則到 `about:debugging` →
-  「載入暫時附加元件」,選 `build/firefox-mv3` 內的 `manifest.json`。
+- 從原始碼:見下方 **Build**,再依瀏覽器載入:
+  - **Chrome**:開 `chrome://extensions` → 開發者模式 → 載入未封裝項目,選 `build/chrome-mv3`。
+  - **Firefox**:開 `about:debugging` →「載入暫時附加元件」→ 選 `build/firefox-mv3` 內的 `manifest.json`。
 
 ---
 
@@ -63,10 +63,9 @@ search that works in both Chinese and English.
 ### Install
 - Chrome Web Store: https://chromewebstore.google.com/detail/poe-zh-trade-tools-pro/olebcconlpeiohdbglmhdggklbajcelc
 - Firefox Add-on (AMO): https://addons.mozilla.org/firefox/addon/poe-zh-trade-tools-pro/
-- From source: see **Build** below, then load `build/chrome-mv3` via
-  `chrome://extensions` → Developer mode → Load unpacked. For Firefox, use
-  `about:debugging` → "Load Temporary Add-on" and pick `manifest.json` inside
-  `build/firefox-mv3`.
+- From source: see **Build** below, then load per browser:
+  - **Chrome**: open `chrome://extensions` → Developer mode → Load unpacked → pick `build/chrome-mv3`.
+  - **Firefox**: open `about:debugging` → "Load Temporary Add-on" → pick `manifest.json` inside `build/firefox-mv3`.
 
 ### Build
 ```bash
