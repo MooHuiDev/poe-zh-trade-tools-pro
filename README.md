@@ -44,7 +44,7 @@
 
 ## English
 
-**Poe Zh Trade Tools Pro** is a Chrome extension that adds a companion sidebar
+**Poe Zh Trade Tools Pro** is a Chrome & Firefox extension that adds a companion sidebar
 and quality-of-life tools to the official Path of Exile trade website, and can
 optionally translate the trade site into Traditional or Simplified Chinese with
 search that works in both Chinese and English.
