@@ -1,6 +1,12 @@
 import type { TranslationValue } from "./types"
 
 export const simplifiedChineseTranslations: Record<string, TranslationValue> = {
+  "settings.bookmarkSyncTitle": "跨设备同步书签",
+  "settings.bookmarkSyncDescription": "在登录同一个浏览器账号的设备间同步书签与文件夹。默认关闭；关闭时所有数据只留在本机。",
+  "settings.bookmarkSyncEnabled": "已开启书签同步",
+  "settings.bookmarkSyncStatus": ({ time }) => `上次同步：${time}`,
+  "settings.bookmarkSyncQuota": "同步空间已满——书签仍保留在本机，但可能无法完整同步。",
+  "settings.bookmarkSyncError": "同步发生问题——你的书签在本机仍安全。",
   "app.name": "Poe Zh Trade Tools Pro",
   "header.subtitle": "交易工具",
   "settings.tradeTranslationTitle": "将市集一并中文化",

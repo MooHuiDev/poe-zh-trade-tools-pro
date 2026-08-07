@@ -2,6 +2,12 @@ import { englishTranslations } from "./en"
 import type { TranslationValue } from "./types"
 
 export const japaneseTranslations: Record<string, TranslationValue> = {
+  "settings.bookmarkSyncTitle": "ブックマークをデバイス間で同期",
+  "settings.bookmarkSyncDescription": "同じブラウザーアカウントにログインしたデバイス間でブックマークとフォルダーを同期します。既定はオフで、オフのときはすべてこのデバイスに保存されます。",
+  "settings.bookmarkSyncEnabled": "ブックマーク同期をオンにしました",
+  "settings.bookmarkSyncStatus": ({ time }) => `最終同期: ${time}`,
+  "settings.bookmarkSyncQuota": "同期ストレージがいっぱいです。ブックマークはこのデバイスに保持されますが、完全には同期されない場合があります。",
+  "settings.bookmarkSyncError": "同期で問題が発生しました。ブックマークはこのデバイスで安全です。",
   ...englishTranslations,
   "whatsNew.item.minimalBookmarksTitle": "Minimal ブックマークレイアウト",
   "whatsNew.item.minimalBookmarksDescription":

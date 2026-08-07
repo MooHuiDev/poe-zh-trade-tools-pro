@@ -2,6 +2,12 @@ import { englishTranslations } from "./en"
 import type { TranslationValue } from "./types"
 
 export const thaiTranslations: Record<string, TranslationValue> = {
+  "settings.bookmarkSyncTitle": "ซิงค์บุ๊กมาร์กข้ามอุปกรณ์",
+  "settings.bookmarkSyncDescription": "ซิงค์บุ๊กมาร์กและโฟลเดอร์ระหว่างอุปกรณ์ที่ลงชื่อเข้าใช้บัญชีเบราว์เซอร์เดียวกัน ปิดไว้โดยค่าเริ่มต้น เมื่อปิดข้อมูลทั้งหมดจะอยู่บนอุปกรณ์นี้เท่านั้น",
+  "settings.bookmarkSyncEnabled": "เปิดการซิงค์บุ๊กมาร์กแล้ว",
+  "settings.bookmarkSyncStatus": ({ time }) => `ซิงค์ล่าสุด: ${time}`,
+  "settings.bookmarkSyncQuota": "พื้นที่ซิงค์เต็ม — บุ๊กมาร์กยังอยู่บนอุปกรณ์นี้ แต่อาจซิงค์ไม่ครบ",
+  "settings.bookmarkSyncError": "การซิงค์มีปัญหา — บุ๊กมาร์กของคุณปลอดภัยบนอุปกรณ์นี้",
   ...englishTranslations,
   "whatsNew.item.minimalBookmarksTitle": "เลย์เอาต์บุ๊กมาร์ก Minimal",
   "whatsNew.item.minimalBookmarksDescription":

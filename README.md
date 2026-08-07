@@ -32,7 +32,8 @@
   價格篩選預設
 - 可選的繁體 / 簡體中文化:篩選器、詞綴、物品名稱、通貨全面中文化,中英雙向皆可搜尋
 - 支援傳奇物品/技能寶石一鍵開啟 PoEDB、PoE Wiki
-- 所有資料(書籤、歷史、設定)都留在本機
+- 選配的跨裝置同步:可將書籤與資料夾透過瀏覽器內建同步在你的裝置間同步(**預設關閉**)
+- 預設所有資料(書籤、歷史、設定)都留在本機;只有在你主動開啟同步時,書籤與資料夾才會透過瀏覽器帳號同步
 
 ### 安裝
 - Chrome 線上應用程式商店:https://chromewebstore.google.com/detail/poe-zh-trade-tools-pro/olebcconlpeiohdbglmhdggklbajcelc
@@ -58,7 +59,8 @@ search that works in both Chinese and English.
 - Optional Traditional / Simplified Chinese localization of stat filters, item
   mods, item names and currencies — bilingual (Chinese + English) search
 - One-click PoEDB / PoE Wiki links on unique items & skill gems
-- All data (bookmarks, history, settings) stays on your device
+- Optional cross-device sync: bookmarks and folders can sync across your devices via the browser's built-in Sync (**off by default**)
+- By default all data (bookmarks, history, settings) stays on your device; only when you turn sync on do bookmarks and folders travel through your browser account
 
 ### Install
 - Chrome Web Store: https://chromewebstore.google.com/detail/poe-zh-trade-tools-pro/olebcconlpeiohdbglmhdggklbajcelc
@@ -75,7 +77,10 @@ pnpm run build:firefox   # output in build/firefox-mv3
 ```
 
 ### Privacy
-No personal data is collected or transmitted. Everything is stored locally.
+The extension has no server and never receives your data. By default everything
+is stored locally. If you turn on the optional bookmark sync, your bookmarks and
+folders are synced through your browser's own Sync service (your Google / Mozilla
+account) — not through us. Search history and other data always stay local.
 See [store/PRIVACY-POLICY.md](store/PRIVACY-POLICY.md).
 
 ---

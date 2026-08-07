@@ -13,6 +13,19 @@ const iconMap = {
 const firefoxBinary = process.env.FIREFOX_BINARY
 const useManualFirefoxRunner = process.env.WXT_FIREFOX_MANUAL === "1"
 
+// Chrome-only, OPT-IN via env `POE_UNPACKED_KEY=1`. Pins the extension ID so a
+// "load unpacked" install resolves to the SAME ID on every machine (otherwise the
+// ID is derived from the folder path and differs per computer). A stable ID is
+// required for chrome.storage.sync to share one bucket across a user's devices.
+//   • Local test / GitHub manual-install build: set POE_UNPACKED_KEY=1 to include it.
+//   • Chrome Web Store build: leave it UNSET — the store assigns its own key/ID, and
+//     shipping a foreign `key` to the store causes problems.
+// This is the PUBLIC key only — safe to commit (cannot sign or impersonate).
+// Resulting ID when included: ojmpcecpbncgeiaejbfdihhlbpgiamja
+const includeChromeKey = process.env.POE_UNPACKED_KEY === "1"
+const CHROME_MANIFEST_KEY =
+  "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArof88TfCWq+ZcmfDa8rrwwuxX27ZTvQVwKVnmIW71C+flZu23MOnbvwnXoFMHxelehbY3+nvEF+5z3IW2c8GoRvGLdl0q3BJ2Jc2aQ5u25W7smDdw7Gi2F2pV1ZPnslC5cXjAlY61K5RoPKjO2EayTBMnNZieLKeAONrDxzdKPIWfxkkuirr2yvvY3mc3Sni1Q8ECu1jl8tBGP9XrJTEQtq1fi3Wz5hQ78aBUhN50YxvuUe8z6FvVWZ4befm5tI+AzjnD/0Cl20NhWdYKyHF+TkM8t/jfC8/ZSPQeNPlhpqlfNtVf1Pm2e6hM88lxeMjiV4KVLyU8zPFFm3iQcOrHwIDAQAB"
+
 export default defineConfig({
   modules: ["@wxt-dev/module-svelte"],
   srcDir: ".",
@@ -34,10 +47,13 @@ export default defineConfig({
       }
     }
   },
-  manifest: () => ({
+  manifest: (env) => ({
     name: "Poe Zh Trade Tools Pro",
-    version: "4.1.2",
-    version_name: "4.1.2",
+    version: "4.1.3",
+    version_name: "4.1.3",
+    ...(env.browser === "chrome" && includeChromeKey
+      ? { key: CHROME_MANIFEST_KEY }
+      : {}),
     description:
       "Traditional/Simplified Chinese localization plus bookmarks, history and result tools for the Path of Exile trade site.",
     permissions: ["storage", "tabs", "unlimitedStorage"],

@@ -1,6 +1,12 @@
 import type { TranslationValue } from "./types"
 
 export const englishTranslations: Record<string, TranslationValue> = {
+  "settings.bookmarkSyncTitle": "Sync bookmarks across devices",
+  "settings.bookmarkSyncDescription": "Sync your bookmarks and folders across devices signed in to the same browser account. Off by default — when off, everything stays on this device.",
+  "settings.bookmarkSyncEnabled": "Bookmark sync turned on",
+  "settings.bookmarkSyncStatus": ({ time }) => `Last synced at ${time}`,
+  "settings.bookmarkSyncQuota": "Sync storage is full — your bookmarks are kept on this device but may not fully sync.",
+  "settings.bookmarkSyncError": "Sync ran into a problem — your bookmarks are safe on this device.",
   "app.name": "Poe Zh Trade Tools Pro",
   "header.subtitle": "Trade Tools",
   "settings.tradeTranslationTitle": "Translate the trade site",

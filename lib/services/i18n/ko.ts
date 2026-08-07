@@ -2,6 +2,12 @@ import { englishTranslations } from "./en"
 import type { TranslationValue } from "./types"
 
 export const koreanTranslations: Record<string, TranslationValue> = {
+  "settings.bookmarkSyncTitle": "기기 간 북마크 동기화",
+  "settings.bookmarkSyncDescription": "같은 브라우저 계정으로 로그인한 기기 간에 북마크와 폴더를 동기화합니다. 기본값은 꺼짐이며, 꺼져 있으면 모든 데이터가 이 기기에만 저장됩니다.",
+  "settings.bookmarkSyncEnabled": "북마크 동기화를 켜습니다",
+  "settings.bookmarkSyncStatus": ({ time }) => `마지막 동기화: ${time}`,
+  "settings.bookmarkSyncQuota": "동기화 저장공간이 가득 찼습니다 — 북마크는 이 기기에 보관되지만 완전히 동기화되지 않을 수 있습니다.",
+  "settings.bookmarkSyncError": "동기화 중 문제가 발생했습니다 — 북마크는 이 기기에 안전하게 보관됩니다.",
   ...englishTranslations,
   "whatsNew.item.minimalBookmarksTitle": "Minimal 북마크 레이아웃",
   "whatsNew.item.minimalBookmarksDescription":

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { languageStore, translate, type AppLanguage } from "../../lib/services/i18n";
   import { bookmarksService } from "../../lib/services/bookmarks";
+  import { bookmarkSyncService } from "../../lib/services/bookmarks-sync";
   import { extensionBackupService } from "../../lib/services/extension-backup";
   import {
     coeButtonSetting,
@@ -209,6 +210,24 @@
   async function handleBookmarkCategoriesChange(bookmarkCategoriesEnabled: boolean) {
     if (!(await settings.updateBookmarkCategoriesVisibility(bookmarkCategoriesEnabled))) {
       flashMessages.alert(translate($languageStore, "settings.saveFailed"));
+    }
+  }
+
+  async function handleBookmarkSyncChange(enabled: boolean) {
+    if (enabled) {
+      await bookmarkSyncService.enable();
+      flashMessages.success(translate($languageStore, "settings.bookmarkSyncEnabled"));
+    } else {
+      await bookmarkSyncService.disable();
+    }
+  }
+
+  function formatSyncTime(iso: string | null): string {
+    if (!iso) return "";
+    try {
+      return new Date(iso).toLocaleTimeString();
+    } catch {
+      return "";
     }
   }
 
@@ -709,6 +728,32 @@
           />
         </div>
         <p class="section-description">{translate($languageStore, "settings.bookmarkCategoriesDescription")}</p>
+      </section>
+
+      <section class="settings-section settings-section--wide">
+        <div class="settings-section__header-row">
+          <div class="section-heading">
+            <h3 class="section-title">{translate($languageStore, "settings.bookmarkSyncTitle")}</h3>
+          </div>
+          <ToggleRow
+            checked={$bookmarkSyncService.enabled}
+            label={translate($languageStore, "settings.bookmarkSyncTitle")}
+            stateLabel={toggleSwitchLabel($bookmarkSyncService.enabled)}
+            onToggle={() => handleBookmarkSyncChange(!$bookmarkSyncService.enabled)}
+          />
+        </div>
+        <p class="section-description">{translate($languageStore, "settings.bookmarkSyncDescription")}</p>
+        {#if $bookmarkSyncService.enabled}
+          <p class="section-description">
+            {#if $bookmarkSyncService.error === "quota"}
+              {translate($languageStore, "settings.bookmarkSyncQuota")}
+            {:else if $bookmarkSyncService.error}
+              {translate($languageStore, "settings.bookmarkSyncError")}
+            {:else if $bookmarkSyncService.lastSyncedAt}
+              {translate($languageStore, "settings.bookmarkSyncStatus", { time: formatSyncTime($bookmarkSyncService.lastSyncedAt) })}
+            {/if}
+          </p>
+        {/if}
       </section>
 
       <section class="settings-section settings-section--wide settings-section--bookmarks-layout" data-tutorial="settings-bookmarks">

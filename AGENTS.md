@@ -24,6 +24,13 @@ ALWAYS prefer MCP graph tools over grep/glob/file-search for code discovery.
 
 # Extension Rules
 
+## Build / release — Chrome `key` flag
+- The Chrome manifest `key` (which pins the extension ID for `chrome.storage.sync`) is **opt-in** via env `POE_UNPACKED_KEY=1`, and is **Chrome-only**.
+- **Chrome Web Store build must NOT carry the key** — build without the flag: `pnpm exec wxt zip`. The store assigns its own key/ID; shipping a foreign `key` causes problems.
+- **Local test / GitHub manual-install-with-sync build**: `POE_UNPACKED_KEY=1 pnpm exec wxt build` (or `zip`). Gives a stable ID (`ojmpcecpbncgeiaejbfdihhlbpgiamja`) so a user's own machines share one sync bucket.
+- **GitHub Release artifacts stay store-safe (no key)** — `release.yml` does NOT set the flag. Firefox manual installs still sync (they use `gecko.id`, independent of this flag).
+- The committed key is the PUBLIC key only (safe to commit; cannot sign or impersonate). The private `.pem` is never committed.
+
 ## Terminology / Casing (standard names)
 - Always write these two product names in this exact casing in **any user-facing / display text** (README, RELEASE_NOTES, What's New, i18n strings, UI labels, docs, commit messages, GitHub):
   - **PoEDB** — never `PoeDB`, `Poedb`, `PoEDb`, `poedb`, `POEDB`.

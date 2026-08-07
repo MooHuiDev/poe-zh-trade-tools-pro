@@ -1,6 +1,12 @@
 import type { TranslationValue } from "./types"
 
 export const spanishTranslations: Record<string, TranslationValue> = {
+  "settings.bookmarkSyncTitle": "Sincronizar marcadores entre dispositivos",
+  "settings.bookmarkSyncDescription": "Sincroniza tus marcadores y carpetas entre dispositivos con la misma cuenta del navegador. Desactivado por defecto — cuando está desactivado, todo permanece en este dispositivo.",
+  "settings.bookmarkSyncEnabled": "Sincronización de marcadores activada",
+  "settings.bookmarkSyncStatus": ({ time }) => `Última sincronización: ${time}`,
+  "settings.bookmarkSyncQuota": "El almacenamiento de sincronización está lleno: tus marcadores se conservan en este dispositivo, pero podrían no sincronizarse por completo.",
+  "settings.bookmarkSyncError": "La sincronización tuvo un problema: tus marcadores están a salvo en este dispositivo.",
   "app.name": "Poe Zh Trade Tools Pro",
   "header.subtitle": "Compañero de Trade",
   "header.expandSidebar": "Expandir panel",

@@ -2,6 +2,12 @@ import { englishTranslations } from "./en"
 import type { TranslationValue } from "./types"
 
 export const germanTranslations: Record<string, TranslationValue> = {
+  "settings.bookmarkSyncTitle": "Lesezeichen geräteübergreifend synchronisieren",
+  "settings.bookmarkSyncDescription": "Synchronisiert Lesezeichen und Ordner zwischen Geräten, die im selben Browserkonto angemeldet sind. Standardmäßig aus — wenn aus, bleibt alles auf diesem Gerät.",
+  "settings.bookmarkSyncEnabled": "Lesezeichen-Synchronisierung aktiviert",
+  "settings.bookmarkSyncStatus": ({ time }) => `Zuletzt synchronisiert um ${time}`,
+  "settings.bookmarkSyncQuota": "Der Sync-Speicher ist voll — deine Lesezeichen bleiben auf diesem Gerät, werden aber evtl. nicht vollständig synchronisiert.",
+  "settings.bookmarkSyncError": "Bei der Synchronisierung ist ein Problem aufgetreten — deine Lesezeichen sind auf diesem Gerät sicher.",
   ...englishTranslations,
   "whatsNew.item.minimalBookmarksTitle": "Minimales Lesezeichenlayout",
   "whatsNew.item.minimalBookmarksDescription":

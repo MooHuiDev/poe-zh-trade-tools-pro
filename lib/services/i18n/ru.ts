@@ -2,6 +2,12 @@ import { englishTranslations } from "./en"
 import type { TranslationValue } from "./types"
 
 export const russianTranslations: Record<string, TranslationValue> = {
+  "settings.bookmarkSyncTitle": "Синхронизировать закладки между устройствами",
+  "settings.bookmarkSyncDescription": "Синхронизирует закладки и папки между устройствами с одной учётной записью браузера. По умолчанию выключено — когда выключено, все данные остаются на этом устройстве.",
+  "settings.bookmarkSyncEnabled": "Синхронизация закладок включена",
+  "settings.bookmarkSyncStatus": ({ time }) => `Последняя синхронизация: ${time}`,
+  "settings.bookmarkSyncQuota": "Хранилище синхронизации переполнено — закладки сохранены на этом устройстве, но могут синхронизироваться не полностью.",
+  "settings.bookmarkSyncError": "При синхронизации возникла проблема — ваши закладки в безопасности на этом устройстве.",
   ...englishTranslations,
   "whatsNew.item.minimalBookmarksTitle": "Минимальный вид закладок",
   "whatsNew.item.minimalBookmarksDescription":

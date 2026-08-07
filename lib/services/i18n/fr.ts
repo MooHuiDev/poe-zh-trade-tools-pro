@@ -2,6 +2,12 @@ import { englishTranslations } from "./en"
 import type { TranslationValue } from "./types"
 
 export const frenchTranslations: Record<string, TranslationValue> = {
+  "settings.bookmarkSyncTitle": "Synchroniser les favoris entre appareils",
+  "settings.bookmarkSyncDescription": "Synchronise vos favoris et dossiers entre les appareils connectés au même compte de navigateur. Désactivé par défaut — désactivé, tout reste sur cet appareil.",
+  "settings.bookmarkSyncEnabled": "Synchronisation des favoris activée",
+  "settings.bookmarkSyncStatus": ({ time }) => `Dernière synchronisation : ${time}`,
+  "settings.bookmarkSyncQuota": "Le stockage de synchronisation est plein — vos favoris restent sur cet appareil mais peuvent ne pas se synchroniser entièrement.",
+  "settings.bookmarkSyncError": "La synchronisation a rencontré un problème — vos favoris sont en sécurité sur cet appareil.",
   ...englishTranslations,
   "whatsNew.item.minimalBookmarksTitle": "Disposition Minimal des favoris",
   "whatsNew.item.minimalBookmarksDescription":
