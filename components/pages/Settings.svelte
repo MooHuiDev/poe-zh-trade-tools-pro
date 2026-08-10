@@ -214,11 +214,9 @@
   }
 
   async function handleBookmarkSyncChange(enabled: boolean) {
+    await bookmarkSyncService.setEnabled(enabled);
     if (enabled) {
-      await bookmarkSyncService.enable();
       flashMessages.success(translate($languageStore, "settings.bookmarkSyncEnabled"));
-    } else {
-      await bookmarkSyncService.disable();
     }
   }
 

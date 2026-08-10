@@ -189,7 +189,7 @@ import About from "./pages/About.svelte";
 
   onMount(async () => {
     await settings.load();
-    void bookmarkSyncService.init();
+    void bookmarkSyncService.initUiMirror();
     tradeLocationService.startPolling();
     const unsubscribeLocation = tradeLocationService.locationStore.subscribe((location) => {
       currentTradeVersion = location.version;

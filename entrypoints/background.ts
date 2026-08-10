@@ -1,4 +1,5 @@
 import { registerBackgroundHandlers } from "~/lib/background"
+import { bookmarkSyncService } from "~/lib/services/bookmarks-sync"
 import { buildAndStoreZhItemMap } from "~/lib/poe-zh-supplement/build-item-map"
 import { refreshTradeData } from "~/lib/poe-zh-core/trade-data"
 
@@ -6,6 +7,10 @@ export default defineBackground({
   type: "module",
   main() {
     registerBackgroundHandlers()
+    // Cross-device bookmark sync engine. Runs here (not in the sidebar) so it
+    // works even when no trade tab is open; MV3 wakes the worker on storage
+    // changes (remote data arriving) and on the enable/disable toggle.
+    void bookmarkSyncService.initBackground()
     // Self-built translation core: fetch official TW stats/static/filters.
     refreshTradeData()
     // Item-name map (bases via official APIs; unique names from bundled dict).

@@ -573,10 +573,15 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
             zh = zhType ? `${zhName} ${zhType}` : zhName
             addCnReverse(zhName, e.name)
             addCnReverse(zh, en)
-            const nameKey = normalize(e.name)
-            if (!(nameKey in cnMap)) cnMap[nameKey] = zhName
-            const textKey = normalize(en)
-            if (!(textKey in cnMap)) cnMap[textKey] = zh
+            // OVERRIDE (not gap-fill): cnMap was seeded from OpenCC(TW) at the top,
+            // so a unique's key already exists there as the simplified TW name. The
+            // authentic 国服 name (CN_DICT / unique-names.cn, resolved via zhOfCn)
+            // must replace it, otherwise result-card translation shows the OpenCC-TW
+            // name (e.g. 特索塔之珠) while the dropdown shows the real 国服 name
+            // (深水遗迹之珠). zhName is always >= the seed in quality, so overriding
+            // is safe (falls back to the same seed value when no 国服 name exists).
+            cnMap[normalize(e.name)] = zhName
+            cnMap[normalize(en)] = zh
           }
         } else {
           zh = zhOfCn(e.text || "") || (e.type ? cnMap[normalize(e.type)] : undefined)

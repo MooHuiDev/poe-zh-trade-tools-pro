@@ -96,6 +96,10 @@ Chinese localization and integration is by **MooHui Dev**.
 
 Some Chinese translation data references **[PoEDB](https://poedb.tw/)** (by chuanhsing) — thanks!
 
+跨裝置同步書籤的設計,參考了 **[@javijec](https://github.com/javijec)**(Poe Trade Plus)分享的分塊儲存與遷移安全作法,特此致謝。
+
+The cross-device bookmark sync design was informed by the chunked-storage and safe-migration approach kindly shared by **[@javijec](https://github.com/javijec)** (Poe Trade Plus) — thanks!
+
 ## License / 授權
 
 本專案**程式碼**以 [MIT License](LICENSE) 授權(原始專案 © KroxiLabs「Poe Trade Plus」;繁 / 簡中文化分支 © MooHui Dev)。

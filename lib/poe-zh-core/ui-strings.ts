@@ -43,6 +43,7 @@ export const UI_STRINGS: Record<string, string> = {
   "Note": "備註",
   "Price": "價格",
   "Corrupted": "已汙染",
+  "Intangibility": "無形性",
   "Verified": "已驗證",
   "Unverified": "未驗證",
   "Travel to Hideout": "前往藏身處",
