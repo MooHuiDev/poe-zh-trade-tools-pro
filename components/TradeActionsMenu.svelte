@@ -60,7 +60,7 @@
     danger?: boolean;
   };
 
-  const OPEN_EVENT_NAME = "poe-trade-plus:trade-actions-open";
+  const OPEN_EVENT_NAME = "pztt:trade-actions-open";
   const ACTION_ORDER: BookmarkTradeActionId[] = [
     "edit",
     "replace",

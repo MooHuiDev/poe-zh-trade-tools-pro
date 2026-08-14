@@ -3,6 +3,7 @@ import {
   hasValidExtensionContext,
   isExtensionContextInvalidatedError
 } from "../utilities/extension-context"
+import { LS_PREFIX, readNsLocal } from "../config/namespace"
 
 interface StoragePayload {
   value: unknown
@@ -98,15 +99,16 @@ export class StorageService {
   }
 
   setLocalValue(key: string, value: string, league: string | null = null) {
-    window.localStorage.setItem(`bt-${this.formatKey(key, league)}`, value)
+    window.localStorage.setItem(`${LS_PREFIX}${this.formatKey(key, league)}`, value)
   }
 
   getLocalValue(key: string, league: string | null = null): string | null {
-    return window.localStorage.getItem(`bt-${this.formatKey(key, league)}`)
+    // Namespaced key, with a read-only fallback to the legacy `bt-` key.
+    return readNsLocal(this.formatKey(key, league))
   }
 
   deleteLocalValue(key: string, league: string | null = null) {
-    window.localStorage.removeItem(`bt-${this.formatKey(key, league)}`)
+    window.localStorage.removeItem(`${LS_PREFIX}${this.formatKey(key, league)}`)
   }
 
   private async write(key: string, value: StoragePayload): Promise<boolean> {

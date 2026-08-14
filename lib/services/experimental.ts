@@ -1,6 +1,7 @@
 import { writable } from "svelte/store";
 import type { TradeSiteVersion } from "../types/trade-location";
 import { storageService } from "./storage";
+import { nsEvent } from "../config/namespace";
 
 const BODY_CLASS = "bt-dev-result-actions-visible";
 const POE2_COPY_BODY_CLASS = "bt-dev-poe2-copy-visible";
@@ -64,7 +65,7 @@ function applyCoeVisibility(value: boolean) {
   isCoeVisible = value;
   setCoe(isCoeVisible);
   document.body?.classList.toggle(COE_BODY_CLASS, isCoeVisible);
-  document.dispatchEvent(new CustomEvent("poe-trade-plus:experimental-change"));
+  document.dispatchEvent(new CustomEvent(nsEvent("experimental-change")));
 }
 
 function applyCoeDesecratedModsEnabled(value: boolean) {
@@ -76,13 +77,13 @@ function applyWikiVisibility(value: boolean) {
   isWikiVisible = value;
   setWiki(isWikiVisible);
   document.body?.classList.toggle(WIKI_BODY_CLASS, isWikiVisible);
-  document.dispatchEvent(new CustomEvent("poe-trade-plus:experimental-change"));
+  document.dispatchEvent(new CustomEvent(nsEvent("experimental-change")));
 }
 
 function applyPoedbVisibility(value: boolean) {
   isPoedbVisible = value;
   setPoedb(isPoedbVisible);
-  document.dispatchEvent(new CustomEvent("poe-trade-plus:experimental-change"));
+  document.dispatchEvent(new CustomEvent(nsEvent("experimental-change")));
 }
 
 export const experimentalSettings = {

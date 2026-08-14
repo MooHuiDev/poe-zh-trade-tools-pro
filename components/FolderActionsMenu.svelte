@@ -43,7 +43,7 @@
     danger?: boolean;
   };
 
-  const OPEN_EVENT_NAME = "poe-trade-plus:folder-actions-open";
+  const OPEN_EVENT_NAME = "pztt:folder-actions-open";
 
   let triggerRef: HTMLButtonElement | null = $state(null);
   let isOpen = $state(false);

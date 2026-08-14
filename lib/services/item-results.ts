@@ -7,6 +7,7 @@ import { slugify } from "../utilities/slugify";
 import { escapeRegex } from "../utilities/escape-regex";
 import { emitPageDebug } from "../utilities/page-debug";
 import { getCurrencyIconUrl } from "../data/currency-icons";
+import { nsEvent, readNsLocal } from "../config/namespace";
 import {
   MAGEBLOOD_LEGACY_TEXTS,
   type MagebloodLegacyLocale
@@ -150,9 +151,7 @@ const getMagebloodLegacyLocale = (): MagebloodLegacyLocale => {
   // Neutral/English trade host has no dedicated localized site (e.g. there is no
   // Traditional Chinese trade host). Fall back to the user's selected interface
   // language so annotations still match what they chose in the extension.
-  const uiLanguage = (
-    window.localStorage.getItem("bt-language") || "en"
-  ).toLowerCase();
+  const uiLanguage = (readNsLocal("language") || "en").toLowerCase();
   return UI_LANGUAGE_TO_MAGEBLOOD_LOCALE[uiLanguage] || "en";
 };
 
@@ -378,11 +377,11 @@ export class ItemResultsService {
     document.removeEventListener("click", this.handleDocumentClick, true);
     document.addEventListener("click", this.handleDocumentClick, true);
     document.removeEventListener(
-      "poe-trade-plus:experimental-change",
+      nsEvent("experimental-change"),
       this.handleExperimentalChange
     );
     document.addEventListener(
-      "poe-trade-plus:experimental-change",
+      nsEvent("experimental-change"),
       this.handleExperimentalChange
     );
   }

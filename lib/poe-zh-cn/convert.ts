@@ -50,7 +50,10 @@ const OVERRIDES: Record<string, string> = {
   精髓: "精华",
   祭祀: "驱灵仪式",
   反叛: "背叛者",
-  裂痕: "裂隙"
+  裂痕: "裂隙",
+  // Base weapon-class term: 国服 calls the Sceptre class 短杖, not 权杖. Substring
+  // replace, so it fixes every "X权杖" base (卡鲁权杖 → 卡鲁短杖, etc.).
+  权杖: "短杖"
 }
 
 // Longest keys first so multi-word phrases win over any shorter substrings.

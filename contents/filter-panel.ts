@@ -5,6 +5,7 @@ import {
   setBuyoutCurrencyPreset
 } from "~/lib/utilities/buyout-currency"
 import { translate, type AppLanguage } from "~/lib/services/i18n"
+import { LS_PREFIX, nsEvent, readNsLocal } from "~/lib/config/namespace"
 
 export const initFilterPanel = () => {
   if ((window as any).__KROX_STARTED__) {
@@ -15,7 +16,7 @@ export const initFilterPanel = () => {
 
   const pageTranslation = (key: string) =>
     translate(
-      (window.localStorage.getItem("bt-language") || "en") as AppLanguage,
+      (readNsLocal("language") || "en") as AppLanguage,
       key
     )
 
@@ -508,15 +509,15 @@ export const initFilterPanel = () => {
     const pane = document.querySelector<HTMLElement>(".search-advanced-pane.brown")
     const existing = pane?.querySelector('[data-krox-filter-presets="true"]')
     const storageKey = window.location.pathname.startsWith("/trade2/")
-      ? "bt-quick-filters-visible-poe2"
-      : "bt-quick-filters-visible-poe1"
+      ? "quick-filters-visible-poe2"
+      : "quick-filters-visible-poe1"
     const placementKey = window.location.pathname.startsWith("/trade2/")
-      ? "bt-quick-filters-placement-poe2"
-      : "bt-quick-filters-placement-poe1"
+      ? "quick-filters-placement-poe2"
+      : "quick-filters-placement-poe1"
 
     if (
-      window.localStorage.getItem(storageKey) === "false" ||
-      window.localStorage.getItem(placementKey) === "sidebar"
+      readNsLocal(storageKey) === "false" ||
+      readNsLocal(placementKey) === "sidebar"
     ) {
       existing?.remove()
       return
@@ -643,13 +644,13 @@ export const initFilterPanel = () => {
   quickFiltersObserver.observe(document.body, { childList: true, subtree: true })
   window.addEventListener("storage", (event) => {
     if (
-      event.key?.startsWith("bt-quick-filters-visible-poe") ||
-      event.key?.startsWith("bt-quick-filters-placement-poe")
+      event.key?.startsWith(`${LS_PREFIX}quick-filters-visible-poe`) ||
+      event.key?.startsWith(`${LS_PREFIX}quick-filters-placement-poe`)
     ) {
       injectSearchPanelQuickFilters()
     }
   })
-  window.addEventListener("poe-trade-plus:quick-filters-change", () => {
+  window.addEventListener(nsEvent("quick-filters-change"), () => {
     injectSearchPanelQuickFilters()
   })
 

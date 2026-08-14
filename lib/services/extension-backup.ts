@@ -1,6 +1,7 @@
 import { ext } from "../utilities/ext-api"
 import { hasValidExtensionContext, isExtensionContextInvalidatedError } from "../utilities/extension-context";
 import { bookmarksService } from "./bookmarks";
+import { LS_PREFIX, LEGACY_LS_PREFIX } from "../config/namespace";
 
 const BACKUP_SCHEMA = 1;
 const APP_NAME = "Poe Zh Trade Tools Pro";
@@ -11,10 +12,14 @@ const STORAGE_KEYS = new Set([
   "bookmark-folders"
 ]);
 const STORAGE_PREFIXES = ["bookmark-trades--"];
-const LOCAL_STORAGE_PREFIX = "bt-";
+// Manage both the project namespace and the legacy `bt-` prefix so a backup
+// taken mid-migration still captures the user's older values.
+const LOCAL_STORAGE_PREFIXES = [LS_PREFIX, LEGACY_LS_PREFIX];
 const LOCAL_STORAGE_EXCLUDED_PREFIXES = [
-  "bt-bulk-sellers-",
-  "bt-bulk-visited-"
+  `${LS_PREFIX}bulk-sellers-`,
+  `${LS_PREFIX}bulk-visited-`,
+  `${LEGACY_LS_PREFIX}bulk-sellers-`,
+  `${LEGACY_LS_PREFIX}bulk-visited-`
 ];
 
 interface StoragePayload {
@@ -37,7 +42,7 @@ const isManagedStorageKey = (key: string) =>
   STORAGE_KEYS.has(key) || STORAGE_PREFIXES.some((prefix) => key.startsWith(prefix));
 
 const isManagedLocalStorageKey = (key: string) =>
-  key.startsWith(LOCAL_STORAGE_PREFIX) &&
+  LOCAL_STORAGE_PREFIXES.some((prefix) => key.startsWith(prefix)) &&
   !LOCAL_STORAGE_EXCLUDED_PREFIXES.some((prefix) => key.startsWith(prefix));
 
 const getAppVersion = () => {

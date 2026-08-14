@@ -39,7 +39,7 @@
   let isOpen = $state(false);
   let isMounted = false;
   let menuStyle = $state("");
-  const OPEN_EVENT_NAME = "poe-trade-plus:actions-menu-open";
+  const OPEN_EVENT_NAME = "pztt:actions-menu-open";
 
   const closeMenu = () => {
     isOpen = false;

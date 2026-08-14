@@ -6,7 +6,9 @@ export type FinerFiltersActionDetail = {
   prefix: string
 }
 
-const BRIDGE_SOURCE = "poe-trade-plus:finer-filters"
+import { nsEvent } from "../config/namespace"
+
+const BRIDGE_SOURCE = nsEvent("finer-filters")
 const BRIDGE_TYPE = "krox-finer-action"
 
 type FinerFiltersBridgeMessage = {

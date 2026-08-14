@@ -3,6 +3,7 @@ import { writable } from "svelte/store"
 import type { TradeSiteVersion } from "../types/trade-location"
 import { setLanguage, type AppLanguage } from "./i18n"
 import { storageService } from "./storage"
+import { LS_PREFIX, nsEvent } from "../config/namespace"
 
 export type SidebarSide = "left" | "right"
 export type BookmarkTradeActionId =
@@ -206,18 +207,18 @@ function legacyVersionSettings(
 function publish() {
   currentSettings = combineSettings(globalSettings, activeVersionSettings)
   if (typeof window !== "undefined") {
-    const quickFiltersStorageKey = `bt-quick-filters-visible-poe${activeVersion}`
+    const quickFiltersStorageKey = `${LS_PREFIX}quick-filters-visible-poe${activeVersion}`
     window.localStorage.setItem(
       quickFiltersStorageKey,
       String(currentSettings.showQuickFilters)
     )
     window.localStorage.setItem(
-      `bt-quick-filters-placement-poe${activeVersion}`,
+      `${LS_PREFIX}quick-filters-placement-poe${activeVersion}`,
       currentSettings.quickFiltersPlacement
     )
-    window.localStorage.setItem("bt-language", currentSettings.language)
+    window.localStorage.setItem(`${LS_PREFIX}language`, currentSettings.language)
     window.dispatchEvent(
-      new CustomEvent("poe-trade-plus:quick-filters-change", {
+      new CustomEvent(nsEvent("quick-filters-change"), {
         detail: {
           key: quickFiltersStorageKey,
           value: currentSettings.showQuickFilters,
