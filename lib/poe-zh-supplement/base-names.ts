@@ -484,6 +484,7 @@ export const BASE_NAMES_TW: Record<string, string> = {
   "goldenobi": "金羽腰帶", // Golden Obi
   "microdistillerybelt": "微釀腰帶", // Micro-Distillery Belt
   "mechalarmbelt": "機械腰帶", // Mechalarm Belt
+  "mechanicalbelt": "腰帶外觀：機械龐克", // Mechanical Belt (experimental Heist base)
   "cordbelt": "繩帶", // Cord Belt
   "breachring": "裂痕戒指", // Breach Ring
   "ceruleanring": "碧藍戒指", // Cerulean Ring

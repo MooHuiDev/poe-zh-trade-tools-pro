@@ -4,7 +4,10 @@
   import trashIcon from "lucide-static/icons/trash-2.svg?raw";
   import xIcon from "lucide-static/icons/x.svg?raw";
   import imageIcon from "lucide-static/icons/image.svg?raw";
+  import plusIcon from "lucide-static/icons/plus.svg?raw";
+  import externalLinkIcon from "lucide-static/icons/external-link.svg?raw";
   import { onDestroy, tick } from "svelte"
+  import type { Snippet } from "svelte"
   import { slide } from "svelte/transition"
 
   import {
@@ -14,6 +17,12 @@
     openUrlsInNewTabs
   } from "../lib/services/active-trade-tab"
   import { bookmarksService } from "../lib/services/bookmarks"
+  import {
+    setTradeDrag,
+    clearTradeDrag,
+    getTradeDrag,
+    isCrossFolderTradeDrop
+  } from "../lib/services/bookmark-dnd"
   import {
     bookmarkFolderIconOptions,
     getBookmarkFolderIconUrl,
@@ -53,6 +62,9 @@
     isTutorialSaveTarget?: boolean;
     startInEditMode?: boolean;
     onStartInEditModeHandled?: () => void;
+    isChildFolder?: boolean;
+    onAddSubfolder?: (parentId: string) => void;
+    children?: Snippet;
   }
 
   let {
@@ -69,7 +81,10 @@
     isFolderDragOver = false,
     isTutorialSaveTarget = false,
     startInEditMode = false,
-    onStartInEditModeHandled = () => {}
+    onStartInEditModeHandled = () => {},
+    isChildFolder = false,
+    onAddSubfolder = () => {},
+    children
   }: Props = $props();
 
   let trades: BookmarksTradeStruct[] = $state([])
@@ -143,9 +158,10 @@
   }
 
   const unsubscribeBookmarksChange = bookmarksService.onChange((event) => {
-    if (!folder.id || !event?.tradesChanged || event.folderId !== folder.id) {
-      return
-    }
+    if (!folder.id || !event?.tradesChanged) return
+    // A change scoped to another folder doesn't concern us; a change with no
+    // folderId (single-store write / sync merge) may affect any folder.
+    if (event.folderId && event.folderId !== folder.id) return
 
     if (isExpanded) {
       syncTradesFromCache()
@@ -397,17 +413,90 @@
     }
   }
 
+  const moveTradeTo = async (
+    trade: BookmarksTradeStruct,
+    targetFolderId: string
+  ) => {
+    if (!folder.id || !trade.id) return
+    try {
+      const ok = await bookmarksService.moveTradeToFolder(
+        trade.id,
+        folder.id,
+        targetFolderId
+      )
+      if (!ok) return
+      await refreshTrades()
+      const targetName =
+        $bookmarksService.find((f) => f.id === targetFolderId)?.title || ""
+      flashMessages.success(
+        translate($languageStore, "folder.movedTrade", {
+          title: trade.title,
+          folder: targetName
+        })
+      )
+    } catch {
+      flashMessages.alert(translate($languageStore, "folder.loadTradesError"))
+    }
+  }
+
   let draggedIndex: number | null = $state(null)
   let dragOverIndex: number | null = $state(null)
   let suppressNextTradeOpen = false
+  // Highlight this folder while a trade from ANOTHER folder is dragged over it,
+  // so dropping onto an empty/collapsed folder is obvious.
+  let isTradeDropTarget = $state(false)
 
   const handleDragStart = (e: DragEvent, index: number) => {
+    // Keep trade drags from also triggering the folder-level drag handlers.
+    e.stopPropagation()
     draggedIndex = index
     suppressNextTradeOpen = true
+    const dragged = displayedTrades[index]
+    if (dragged?.id && folder.id) {
+      setTradeDrag(dragged.id, folder.id, dragged.title)
+    }
     if (e.dataTransfer) {
       e.dataTransfer.effectAllowed = "move"
       e.dataTransfer.setData("text/plain", index.toString())
     }
+  }
+
+  // Drop onto this folder (its card/header/list). If a trade from ANOTHER
+  // folder is being dragged, move it here; otherwise fall through to the
+  // folder-reordering drop handler.
+  const handleFolderRootDrop = async (event: DragEvent) => {
+    event.preventDefault()
+    // Once THIS folder handles the drop, don't let it bubble to an ancestor
+    // folder (a sub-folder is nested inside its parent's DOM, so without this a
+    // drop inside the sub-folder would also fire the parent's handler).
+    event.stopPropagation()
+    isTradeDropTarget = false
+    if (folder.id && isCrossFolderTradeDrop(folder.id)) {
+      const drag = getTradeDrag()
+      clearTradeDrag()
+      draggedIndex = null
+      dragOverIndex = null
+      if (!drag.tradeId || !drag.fromFolderId) return
+      const ok = await bookmarksService.moveTradeToFolder(
+        drag.tradeId,
+        drag.fromFolderId,
+        folder.id
+      )
+      if (ok) {
+        await refreshTrades()
+        // Reveal the drop target so a move into an empty/collapsed folder is
+        // clearly visible.
+        if (!isExpanded) onToggleExpansion(folder.id)
+        flashMessages.success(
+          translate($languageStore, "folder.movedTrade", {
+            title: drag.title,
+            folder: folder.title
+          })
+        )
+      }
+      return
+    }
+    onFolderDrop(event, folder.id || "")
   }
 
   const handleDragEnter = (e: DragEvent, index: number) => {
@@ -419,6 +508,9 @@
 
   const handleDrop = async (e: DragEvent, index: number) => {
     e.preventDefault()
+    // This folder's own item reorder — don't let it bubble to a folder root
+    // drop handler (would otherwise be seen as a cross-folder move).
+    if (draggedIndex !== null) e.stopPropagation()
     if (draggedIndex !== null && draggedIndex !== index && folder.id) {
       const orderedTrades = [...displayedTrades]
       const trade = orderedTrades[draggedIndex]
@@ -446,6 +538,7 @@
   const handleDragEnd = () => {
     draggedIndex = null
     dragOverIndex = null
+    clearTradeDrag()
     window.setTimeout(() => {
       suppressNextTradeOpen = false
     }, 0)
@@ -503,6 +596,13 @@
     await openUrlInNewTab(resolveTradeUrl(trade.location, "", true))
   }
 
+  // Sub-folder header shortcut: make sure trades are loaded (the folder may be
+  // collapsed) before opening them all.
+  const openAllEnsureLoaded = async () => {
+    if (!hasLoadedTrades) await loadTrades(true)
+    await openAllInNewTabs()
+  }
+
   // Open every saved search in the folder, each in its own new background tab.
   const openAllInNewTabs = async () => {
     const list = displayedTrades
@@ -522,8 +622,12 @@
     )
   }
 
-  const exportFolder = () => {
-    const serialized = bookmarksService.serializeFolder(folder, trades)
+  const exportFolder = async () => {
+    if (!folder.id) return
+    // Fetch fresh so export works even when the folder is collapsed, and bundle
+    // any sub-folders (and their trades) via the folder-tree serializer.
+    const parentTrades = await bookmarksService.fetchTradesByFolderId(folder.id)
+    const serialized = await bookmarksService.serializeFolderTree(folder, parentTrades)
     void copyToClipboard(serialized)
       .then(() => {
         flashMessages.success(translate($languageStore, "folder.copiedFolder"))
@@ -779,6 +883,18 @@
     }
     return groups
   })
+  // Candidate folders for "move to" — same version/realm, excluding this one.
+  let moveTargets = $derived(
+    $bookmarksService
+      .filter(
+        (f) =>
+          !!f.id &&
+          f.id !== folder.id &&
+          f.version === folder.version &&
+          (f.realm ?? "intl") === (folder.realm ?? "intl")
+      )
+      .map((f) => ({ id: f.id as string, title: f.title }))
+  )
   let categoryOptions = $derived(folder.categories || [])
   let categoryById = $derived(new Map(categoryOptions.map((category) => [category.id, category])))
   let displayedTrades = $derived(getDisplayedTrades())
@@ -794,17 +910,26 @@
     : ''}"
   class:is-ultra-compact={$settings.ultraCompactBookmarks}
   class:is-editing={editingFolder}
+  class:is-subfolder={isChildFolder}
   class:is-folder-dragging={isFolderDragging}
   class:is-folder-drag-over={isFolderDragOver}
-  draggable="true"
+  class:is-trade-drop-target={isTradeDropTarget}
+  draggable={!isChildFolder}
   ondragstart={(e) => onFolderDragStart(e, folder.id || "")}
   ondragenter={(e) => onFolderDragEnter(e, folder.id || "")}
-  ondragover={(event) => event.preventDefault()}
-  ondrop={(event) => {
+  ondragover={(event) => {
     event.preventDefault()
-    onFolderDrop(event, folder.id || "")
+    if (folder.id && isCrossFolderTradeDrop(folder.id)) isTradeDropTarget = true
   }}
-  ondragend={onFolderDragEnd}>
+  ondragleave={(event) => {
+    const to = (event as DragEvent).relatedTarget as Node | null
+    if (!(event.currentTarget as HTMLElement).contains(to)) isTradeDropTarget = false
+  }}
+  ondrop={(event) => void handleFolderRootDrop(event)}
+  ondragend={() => {
+    isTradeDropTarget = false
+    onFolderDragEnd()
+  }}>
   <div class="folder-header">
     <div
       class="folder-drag-handle"
@@ -851,6 +976,30 @@
     </button>
 
     <div class="header-actions">
+      {#if isChildFolder}
+        <button
+          type="button"
+          class="subfolder-quick-btn"
+          title={translate($languageStore, "folder.saveCurrentSearch")}
+          aria-label={translate($languageStore, "folder.saveCurrentSearch")}
+          onclick={(event) => {
+            event.stopPropagation()
+            void createTradeFromCurrent()
+          }}>
+          <span class="action-icon"><SvgIcon svg={plusIcon} /></span>
+        </button>
+        <button
+          type="button"
+          class="subfolder-quick-btn"
+          title={translate($languageStore, "folder.openAllInNewTabs")}
+          aria-label={translate($languageStore, "folder.openAllInNewTabs")}
+          onclick={(event) => {
+            event.stopPropagation()
+            void openAllEnsureLoaded()
+          }}>
+          <span class="action-icon"><SvgIcon svg={externalLinkIcon} /></span>
+        </button>
+      {/if}
       <FolderActionsMenu
         {folder}
         onRename={startEditingFolder}
@@ -858,7 +1007,10 @@
         onExport={exportFolder}
         onDuplicate={duplicateFolder}
         onClearCompleted={requestClearCompleted}
-        onDelete={onDeleteEvent} />
+        onDelete={onDeleteEvent}
+        canAddSubfolder={!folder.parentId}
+        canExport={!isChildFolder}
+        onAddSubfolder={() => onAddSubfolder(folder.id || "")} />
     </div>
   </div>
 
@@ -1060,7 +1212,9 @@
                             {categoryOptions}
                             selectedCategoryId={categoryIdForTrade(trade)}
                             onCategorySelect={(categoryId) => void selectTradeCategory(trade, categoryId)}
-                            onCategoryCreate={(title) => void createCategoryForTrade(trade, title)} />
+                            onCategoryCreate={(title) => void createCategoryForTrade(trade, title)}
+                          moveTargets={moveTargets}
+                          onMoveToFolder={(id) => void moveTradeTo(trade, id)} />
                         </div>
                       {/if}
                     </div>
@@ -1079,7 +1233,9 @@
                           {categoryOptions}
                           selectedCategoryId={categoryIdForTrade(trade)}
                           onCategorySelect={(categoryId) => void selectTradeCategory(trade, categoryId)}
-                          onCategoryCreate={(title) => void createCategoryForTrade(trade, title)} />
+                          onCategoryCreate={(title) => void createCategoryForTrade(trade, title)}
+                          moveTargets={moveTargets}
+                          onMoveToFolder={(id) => void moveTradeTo(trade, id)} />
                       </div>
                     {/if}
                   </div>
@@ -1088,6 +1244,8 @@
             {/if}
           {/each}
         </ul>
+        {@render children?.()}
+        {#if !isChildFolder}
         <div class="footer-actions">
           <div
             class="save-search-anchor"
@@ -1106,6 +1264,7 @@
             </div>
           {/if}
         </div>
+        {/if}
       </LoadingContainer>
     </div>
   {/if}
@@ -1166,6 +1325,76 @@
 .folder.is-archived {
   opacity: 0.72;
 }
+/* Sub-folders render minimal — a flat, divider-like row in a parchment/gold
+   tone, deliberately unlike the parent's raised blue card. */
+.folder.is-subfolder {
+  margin: 2px 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.folder.is-subfolder .folder-header {
+  background: linear-gradient(
+    180deg,
+    rgba(163, 141, 109, 0.2),
+    rgba(163, 141, 109, 0.08)
+  );
+  border: none;
+  border-left: 3px solid rgba(200, 165, 105, 0.85);
+  border-bottom: 1px solid rgba(163, 141, 109, 0.2);
+  border-radius: 0;
+  padding: 3px 8px;
+  gap: 6px;
+  color: rgba(216, 194, 150, 0.96);
+}
+.folder.is-subfolder .folder-drag-handle {
+  display: none;
+}
+.folder.is-subfolder .header-label {
+  font-size: calc(12px * var(--bt-text-scale, 1));
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: rgba(196, 177, 140, 0.9);
+}
+.folder.is-subfolder .folder-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+}
+.folder.is-subfolder .indicator {
+  font-size: calc(9px * var(--bt-text-scale, 1));
+  color: rgba(163, 141, 109, 0.6);
+}
+.folder.is-subfolder .trades-content {
+  background: transparent;
+  border-radius: 0;
+}
+.folder.is-subfolder .trades-list {
+  padding: 6px 8px;
+  background: transparent;
+}
+/* Match the folder action buttons (rename/delete/more) so the header row is
+   visually consistent. */
+.subfolder-quick-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid rgba(238, 238, 238, 0.12);
+  background: rgba(5, 5, 5, 0.45);
+  color: rgba(238, 238, 238, 0.82);
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+.subfolder-quick-btn:hover {
+  background-color: rgba(238, 238, 238, 0.08);
+  border-color: rgba(163, 141, 109, 0.38);
+  color: #eeeeee;
+}
 .folder.is-folder-dragging {
   opacity: 0.45;
   transform: scale(0.985);
@@ -1173,6 +1402,19 @@
 .folder.is-folder-drag-over {
   border-color: rgba(163, 141, 109, 0.34);
   box-shadow: inset 0 1px 0 rgba(238, 238, 238, 0.02), 0 0 0 1px rgba(163, 141, 109, 0.2), 0 10px 22px rgba(0, 0, 0, 0.24);
+}
+/* Trade being dragged over this folder — clear "drop here" affordance, visible
+   even when the folder is empty/collapsed (just a header row). */
+.folder.is-trade-drop-target {
+  outline: 2px dashed rgba(212, 175, 105, 0.9);
+  outline-offset: -2px;
+  background: rgba(212, 175, 105, 0.12);
+}
+.folder.is-trade-drop-target .folder-header {
+  background: rgba(212, 175, 105, 0.22);
+}
+.folder.is-subfolder.is-trade-drop-target .folder-header {
+  background: rgba(212, 175, 105, 0.28);
 }
 
 .folder-header {

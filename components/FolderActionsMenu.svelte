@@ -7,6 +7,7 @@
   import SvgIcon from "./SvgIcon.svelte";
 
   import editIcon from "lucide-static/icons/pencil.svg?raw";
+  import folderPlusIcon from "lucide-static/icons/folder-plus.svg?raw";
   import copyIcon from "lucide-static/icons/copy.svg?raw";
   import uploadIcon from "lucide-static/icons/upload.svg?raw";
   import trashIcon from "lucide-static/icons/trash-2.svg?raw";
@@ -23,6 +24,9 @@
     onDuplicate: () => void;
     onClearCompleted: () => void;
     onDelete: () => void;
+    canAddSubfolder?: boolean;
+    onAddSubfolder?: () => void;
+    canExport?: boolean;
   }
 
   let {
@@ -32,7 +36,10 @@
     onExport,
     onDuplicate,
     onClearCompleted,
-    onDelete
+    onDelete,
+    canAddSubfolder = false,
+    onAddSubfolder = () => {},
+    canExport = true
   }: Props = $props();
 
   type FolderAction = {
@@ -56,6 +63,16 @@
       label: translate($languageStore, "folder.editFolder"),
       handler: onRename
     },
+    ...(canAddSubfolder
+      ? [
+          {
+            id: "addSubfolder",
+            icon: folderPlusIcon,
+            label: translate($languageStore, "folder.addSubfolder"),
+            handler: onAddSubfolder
+          }
+        ]
+      : []),
     {
       id: "archive",
       icon: folder.archivedAt ? archiveRestoreIcon : archiveIcon,
@@ -64,12 +81,16 @@
         : translate($languageStore, "folder.archiveFolder"),
       handler: onArchive
     },
-    {
-      id: "export",
-      icon: uploadIcon,
-      label: translate($languageStore, "folder.exportFolder"),
-      handler: onExport
-    },
+    ...(canExport
+      ? [
+          {
+            id: "export",
+            icon: uploadIcon,
+            label: translate($languageStore, "folder.exportFolder"),
+            handler: onExport
+          }
+        ]
+      : []),
     {
       id: "duplicate",
       icon: copyIcon,

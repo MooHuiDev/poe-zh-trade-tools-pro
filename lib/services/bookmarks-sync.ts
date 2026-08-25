@@ -49,7 +49,10 @@ import {
  */
 
 const FOLDERS_KEY = "bookmark-folders"
-const TRADES_PREFIX = "bookmark-trades--"
+// Single-store model: all saved searches live in one list (each tagged with a
+// folderId). Legacy per-folder keys (bookmark-trades--<id>) are migrated away by
+// the app layer and are no longer synced.
+const ALL_TRADES_KEY = "bookmark-trades-all"
 const TOMBSTONES_KEY = "bookmark-sync-tombstones"
 const ORDERS_KEY = "bookmark-sync-orders"
 const SHADOW_KEY = "bookmark-sync-shadow"
@@ -70,10 +73,10 @@ export type BookmarkSyncState = {
 }
 
 const isManagedItemsKey = (key: string) =>
-  key === FOLDERS_KEY || key.startsWith(TRADES_PREFIX)
+  key === FOLDERS_KEY || key === ALL_TRADES_KEY
 const isManagedBase = (base: string) =>
   base === FOLDERS_KEY ||
-  base.startsWith(TRADES_PREFIX) ||
+  base === ALL_TRADES_KEY ||
   base === TOMBSTONES_KEY ||
   base === ORDERS_KEY
 
@@ -136,6 +139,7 @@ class BookmarkSyncService {
   private applying = false
   private runsEngine = false // true only in the background service worker
   private engineEnabled = false // engine's view of the on/off flag
+  private localDirty = 0 // bumped on each external local managed write (race guard)
   private uiWatching = false
 
   private store = writable<BookmarkSyncState>({
@@ -223,7 +227,12 @@ class BookmarkSyncService {
     const touched = Object.keys(changes).some(
       (k) => isManagedItemsKey(k) || isManagedBase(parseSyncKey(k).base)
     )
-    if (touched) this.scheduleReconcile()
+    if (touched) {
+      // A local write not made by us (a user move/edit) invalidates any in-flight
+      // reconcile's snapshot — bump the guard so it aborts instead of clobbering.
+      if (area === "local") this.localDirty++
+      this.scheduleReconcile()
+    }
   }
 
   private async engineEnable() {
@@ -360,6 +369,10 @@ class BookmarkSyncService {
     if (!this.hasStorage()) return
     try {
       const localAll = await ext.storage.local.get(null)
+      // Snapshot the local-write guard: if a user move/edit lands while we do the
+      // (slow, async) sync read + merge below, we must NOT write our stale result
+      // back over it. Checked again right before the write-back.
+      const dirtyAtStart = this.localDirty
       const sync = await this.readSyncAll()
       const clock = await this.loadClock()
       const shadow: Shadow = (this.unwrap(localAll[SHADOW_KEY]) as Shadow) || {}
@@ -490,6 +503,14 @@ class BookmarkSyncService {
         !syncOrdersChanged &&
         !sync.fromFallback // a fallback read means we still owe a chunked rewrite
 
+      // Abort if the local store changed under us during the async merge above —
+      // writing now would clobber the concurrent user change (the "revives when
+      // you operate fast" bug). Reschedule so the change is reconciled cleanly.
+      if (this.localDirty !== dirtyAtStart) {
+        this.scheduleReconcile()
+        return
+      }
+
       let quotaSkipped = false
       if (!nothingToDo) {
         this.applying = true
@@ -554,6 +575,9 @@ class BookmarkSyncService {
         } finally {
           setTimeout(() => {
             this.applying = false
+            // User writes during the apply window are ignored above; run once
+            // more so a change made right then isn't stranded until the next one.
+            this.scheduleReconcile()
           }, 50)
         }
       }

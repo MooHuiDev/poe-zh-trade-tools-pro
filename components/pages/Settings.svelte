@@ -343,7 +343,11 @@
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `poe-trade-plus-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    // Project-named backup file with local date + time (e.g. pztt-backup-2026-08-24-1430.json).
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
+    anchor.download = `pztt-backup-${stamp}.json`;
     anchor.click();
     URL.revokeObjectURL(url);
     flashMessages.success(translate($languageStore, "bookmarks.exported"));

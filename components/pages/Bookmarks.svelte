@@ -14,6 +14,7 @@
   import { flashMessages } from "../../lib/services/flash";
   import { storageService } from "../../lib/services/storage";
   import type { BookmarksFolderStruct } from "../../lib/types/bookmarks";
+  import { buildFolderTree } from "../../lib/services/folder-tree";
 
   import BookmarkFolder from "../BookmarkFolder.svelte";
   import Button from "../Button.svelte";
@@ -132,6 +133,21 @@
     flashMessages.success(translate($languageStore, "bookmarks.folderCreated"));
   };
 
+  const createSubfolder = async (parentId: string) => {
+    if (!parentId) return;
+    const folderId = await bookmarksService.createSubfolder(parentId, {
+      title: translate($languageStore, "bookmarks.newFolder"),
+      icon: null,
+      archivedAt: null
+    });
+    if (!folderId) return;
+    if (!expandedFolderIds.includes(folderId)) {
+      expandedFolderIds = [...expandedFolderIds, folderId];
+    }
+    pendingEditFolderId = folderId;
+    flashMessages.success(translate($languageStore, "bookmarks.folderCreated"));
+  };
+
   const toggleArchive = async (folder: BookmarksFolderStruct) => {
     await bookmarksService.toggleFolderArchive(folder);
   };
@@ -207,16 +223,24 @@
           return;
       }
 
-      const deserialized = bookmarksService.deserializeFolder(serialized);
-      if (!deserialized) {
+      const tree = bookmarksService.deserializeFolderTree(serialized);
+      if (!tree) {
           flashMessages.alert(translate($languageStore, "bookmarks.invalidFolderData"));
           return;
       }
 
-      const [folder, trades] = deserialized;
+      const { folder, trades, children } = tree;
       const folderId = await bookmarksService.persistFolder(folder);
       await bookmarksService.persistTrades(trades, folderId);
-      
+      // Recreate bundled sub-folders under the imported parent (v6 exports).
+      for (const [childFolder, childTrades] of children) {
+        const childId = await bookmarksService.persistFolder({
+          ...childFolder,
+          parentId: folderId
+        });
+        await bookmarksService.persistTrades(childTrades, childId);
+      }
+
       flashMessages.success(translate($languageStore, "bookmarks.importedFolder", { title: folder.title }));
       importText = "";
       isImportingText = false;
@@ -317,8 +341,11 @@
     (folder) => !!folder.archivedAt === showArchived
   ));
   let isEmptyState = $derived(!isLoading && displayedFolders.length === 0);
+  // One-level tree: top-level folders (drag-reorderable) with their children.
+  let folderTree = $derived(buildFolderTree(displayedFolders));
+  // Drag-reorder indexes are over top-level folders only (see moveFolder).
   let displayedFolderIndexById = $derived(new Map(
-    displayedFolders.map((folder, index) => [folder.id, index])
+    folderTree.topLevel.map((folder, index) => [folder.id, index])
   ));
   let validFolderIds = $derived(new Set(
     $bookmarksService.map((folder) => folder.id).filter(Boolean)
@@ -430,10 +457,10 @@
           onAction={showArchived ? () => showArchived = false : createFolder}
         />
       {:else}
-        {#each displayedFolders as folder (folder.id)}
+        {#each folderTree.topLevel as folder (folder.id)}
           <div class="folder-shell" animate:flip={{ duration: 180 }}>
-            <BookmarkFolder 
-                {folder} 
+            <BookmarkFolder
+                {folder}
                 isExpanded={expandedFolderIds.includes(folder.id || "")}
                 isTutorialSaveTarget={tutorialStep === "save-search" && folder.id === tutorialTargetFolderId}
                 startInEditMode={pendingEditFolderId === folder.id}
@@ -442,14 +469,35 @@
                 }}
                 onToggleExpansion={toggleExpansion}
                 onArchiveEvent={() => toggleArchive(folder)}
-                 onDeleteEvent={() => requestFolderDelete(folder)}
+                onDeleteEvent={() => requestFolderDelete(folder)}
+                onAddSubfolder={createSubfolder}
                 onFolderDragStart={handleFolderDragStart}
                 onFolderDragEnter={handleFolderDragEnter}
                 onFolderDrop={handleFolderDrop}
                 onFolderDragEnd={handleFolderDragEnd}
                 isFolderDragging={draggedFolderId === folder.id}
                 isFolderDragOver={dragOverFolderId === folder.id}
-            />
+            >
+              {#if (folderTree.childrenByParent.get(folder.id || "")?.length || 0) > 0}
+                <div class="subfolder-group">
+                  {#each folderTree.childrenByParent.get(folder.id || "") || [] as child (child.id)}
+                    <BookmarkFolder
+                      folder={child}
+                      isChildFolder={true}
+                      isExpanded={expandedFolderIds.includes(child.id || "")}
+                      startInEditMode={pendingEditFolderId === child.id}
+                      onStartInEditModeHandled={() => {
+                        if (pendingEditFolderId === child.id) pendingEditFolderId = null;
+                      }}
+                      onToggleExpansion={toggleExpansion}
+                      onArchiveEvent={() => toggleArchive(child)}
+                      onDeleteEvent={() => requestFolderDelete(child)}
+                      onAddSubfolder={createSubfolder}
+                    />
+                  {/each}
+                </div>
+              {/if}
+            </BookmarkFolder>
           </div>
         {/each}
       {/if}
@@ -636,6 +684,14 @@
   margin: 2px 0;
   width: 100%;
   min-width: 0;
+}
+
+/* Sub-folders live under their expanded parent, indented with a tree line so
+   the hierarchy reads clearly. */
+.subfolder-group {
+  margin: 2px 10px 10px;
+  padding-left: 12px;
+  border-left: 2px solid rgba(163, 141, 109, 0.3);
 }
 
 .import-text-area {

@@ -39,7 +39,12 @@
   </div>
   
   <div class="toolbar">
-    <button class="minimize-toggle" onclick={onToggleMinimize} title={isMinimized ? translate($languageStore, "header.expandSidebar") : translate($languageStore, "header.minimizeSidebar")}>
+    <button
+      class="minimize-toggle"
+      onclick={onToggleMinimize}
+      title={isMinimized ? translate($languageStore, "header.expandSidebar") : translate($languageStore, "header.minimizeSidebar")}
+      style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;background:rgba(238,238,238,0.04);border:1px solid rgba(238,238,238,0.08);border-radius:4px;color:rgba(238,238,238,0.72);"
+    >
       <span class="chev-icon">
         {#if sidebarSide === 'left'}
           {isMinimized ? "▶" : "◀"}
@@ -154,14 +159,16 @@
   font-size: calc(10px * var(--bt-text-scale, 1));
   line-height: 1;
 }
+/* !important so these win over the inline base styles (which exist only to
+   prevent the host page's blue button style flashing in before our CSS loads). */
 .minimize-toggle:hover {
-  background: rgba(238, 238, 238, 0.1);
-  border-color: rgba(163, 141, 109, 0.4);
-  color: #a38d6d;
+  background: rgba(238, 238, 238, 0.1) !important;
+  border-color: rgba(163, 141, 109, 0.4) !important;
+  color: #a38d6d !important;
 }
 .minimize-toggle:focus-visible {
-  border-color: rgba(163, 141, 109, 0.62);
-  color: #a38d6d;
+  border-color: rgba(163, 141, 109, 0.62) !important;
+  color: #a38d6d !important;
   box-shadow: 0 0 0 1px rgba(163, 141, 109, 0.24), 0 0 0 3px rgba(163, 141, 109, 0.12);
 }
 </style>

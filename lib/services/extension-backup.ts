@@ -9,8 +9,11 @@ const STORAGE_KEYS = new Set([
   "app-settings",
   "app-settings-poe1",
   "app-settings-poe2",
-  "bookmark-folders"
+  "bookmark-folders",
+  "bookmark-trades-all"
 ]);
+// Legacy per-folder trade keys are still captured for backups taken before the
+// single-store migration.
 const STORAGE_PREFIXES = ["bookmark-trades--"];
 // Manage both the project namespace and the legacy `bt-` prefix so a backup
 // taken mid-migration still captures the user's older values.

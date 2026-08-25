@@ -13,9 +13,15 @@ import { decodeBase64Utf8, encodeBase64Utf8 } from "../utilities/base64"
 import { uniqueId } from "../utilities/unique-id"
 import { languageStore, translate } from "./i18n"
 import { storageService } from "./storage"
+import { ext } from "../utilities/ext-api"
+import { collectFolderAndDescendantIds, isSubfolder } from "./folder-tree"
 
 const FOLDERS_KEY = "bookmark-folders"
 const TRADES_PREFIX_KEY = "bookmark-trades"
+// B-plan: all saved searches live in ONE synced list, each tagged with its
+// `folderId`. A move is then a single-item field edit (atomic under sync),
+// which removes the cross-folder resurrection/duplication class of bugs.
+const ALL_TRADES_KEY = "bookmark-trades-all"
 const SECTION_DELIMITER = "\n--------------------\n"
 const LINE_DELIMITER = "\n"
 
@@ -35,7 +41,7 @@ const getStorageChangeValue = <T>(
   return payload.value as T
 }
 
-type ExportVersion = 1 | 2 | 3 | 4 | 5
+type ExportVersion = 1 | 2 | 3 | 4 | 5 | 6
 type BookmarksChangeEvent = {
   foldersChanged?: boolean
   tradesChanged?: boolean
@@ -48,13 +54,15 @@ interface ExportedFolderStruct {
   ver?: TradeSiteVersion
   cats?: Array<{ id: string; tit: string }>
   trs: Array<{ tit: string; loc: string; cat?: string }>
+  // v6: sub-folders bundled with the parent (one level; each with its own trades).
+  subs?: ExportedFolderStruct[]
 }
 
 export class BookmarksService {
   private foldersStore = writable<BookmarksFolderStruct[]>([])
   private listeners = new Set<(event?: BookmarksChangeEvent) => void>()
-  private tradesCache = new Map<string, BookmarksTradeStruct[]>()
-  private tradesRequests = new Map<string, Promise<BookmarksTradeStruct[]>>()
+  private allTradesCache: BookmarksTradeStruct[] | null = null
+  private allTradesRequest: Promise<BookmarksTradeStruct[]> | null = null
   public subscribe = this.foldersStore.subscribe
 
   constructor() {
@@ -92,17 +100,13 @@ export class BookmarksService {
         this.notifyChange({ foldersChanged: true })
       }
 
-      const tradesPrefix = `${TRADES_PREFIX_KEY}--`
-      for (const [key, change] of Object.entries(changes)) {
-        if (!key.startsWith(tradesPrefix)) continue
-
-        const folderId = key.slice(tradesPrefix.length)
-        const trades = this.normalizeTrades(
-          getStorageChangeValue<BookmarksTradeStruct[]>(change)
+      const allChange = changes[ALL_TRADES_KEY]
+      if (allChange) {
+        this.allTradesCache = this.normalizeTrades(
+          getStorageChangeValue<BookmarksTradeStruct[]>(allChange)
         )
-        this.tradesCache.set(folderId, trades)
-        this.tradesRequests.delete(folderId)
-        this.notifyChange({ tradesChanged: true, folderId })
+        // No folderId = every folder may be affected (e.g. a sync merge).
+        this.notifyChange({ tradesChanged: true })
       }
     })
   }
@@ -154,40 +158,87 @@ export class BookmarksService {
     }))
   }
 
+  // ── single-store trade access ──
+  private async fetchAllTrades(force = false): Promise<BookmarksTradeStruct[]> {
+    if (!force && this.allTradesCache) return [...this.allTradesCache]
+    if (!force && this.allTradesRequest) return this.allTradesRequest
+
+    const request = (async () => {
+      const stored = await storageService.getValue<BookmarksTradeStruct[]>(
+        ALL_TRADES_KEY
+      )
+      const all =
+        stored === null
+          ? await this.migrateLegacyTrades()
+          : this.normalizeTrades(stored)
+      this.allTradesCache = all
+      return [...all]
+    })()
+
+    this.allTradesRequest = request
+    try {
+      return await request
+    } finally {
+      this.allTradesRequest = null
+    }
+  }
+
+  private async persistAllTrades(
+    all: BookmarksTradeStruct[]
+  ): Promise<BookmarksTradeStruct[]> {
+    const safe = this.normalizeTrades(all.map((t) => ({ ...t, id: t.id || uniqueId() })))
+    this.allTradesCache = safe
+    await storageService.setValue(ALL_TRADES_KEY, safe)
+    return [...safe]
+  }
+
+  // One-time migration: fold the legacy per-folder keys (bookmark-trades--<id>)
+  // into the single store, tagging each trade with its folderId, then drop them.
+  private async migrateLegacyTrades(): Promise<BookmarksTradeStruct[]> {
+    const all: BookmarksTradeStruct[] = []
+    const legacyKeys: string[] = []
+    try {
+      const raw = await ext.storage.local.get(null)
+      const prefix = `${TRADES_PREFIX_KEY}--`
+      for (const [key, payload] of Object.entries(raw)) {
+        if (!key.startsWith(prefix)) continue
+        legacyKeys.push(key)
+        const folderId = key.slice(prefix.length)
+        const value =
+          payload && typeof payload === "object" && "value" in payload
+            ? (payload as { value: unknown }).value
+            : payload
+        for (const t of this.normalizeTrades(
+          Array.isArray(value) ? (value as BookmarksTradeStruct[]) : []
+        )) {
+          all.push({ ...t, folderId, id: t.id || uniqueId() })
+        }
+      }
+    } catch {
+      /* fall through with whatever we gathered */
+    }
+    await storageService.setValue(ALL_TRADES_KEY, all)
+    if (legacyKeys.length && ext.storage?.local?.remove) {
+      try {
+        await ext.storage.local.remove(legacyKeys)
+      } catch {
+        /* leaving stale legacy keys is harmless */
+      }
+    }
+    return all
+  }
+
   getCachedTradesByFolderId(folderId: string): BookmarksTradeStruct[] | null {
-    const cached = this.tradesCache.get(folderId)
-    return cached ? [...cached] : null
+    if (!this.allTradesCache) return null
+    return this.allTradesCache.filter((t) => t.folderId === folderId)
   }
 
   async fetchTradesByFolderId(
     folderId: string,
     options?: { force?: boolean }
   ): Promise<BookmarksTradeStruct[]> {
-    if (!options?.force) {
-      const cached = this.getCachedTradesByFolderId(folderId)
-      if (cached) {
-        return cached
-      }
-
-      const pending = this.tradesRequests.get(folderId)
-      if (pending) {
-        return pending
-      }
-    }
-
-    const request = storageService
-      .getValue<BookmarksTradeStruct[]>(`${TRADES_PREFIX_KEY}--${folderId}`)
-      .then((trades) => {
-        const normalized = this.normalizeTrades(trades)
-        this.tradesCache.set(folderId, normalized)
-        return [...normalized]
-      })
-      .finally(() => {
-        this.tradesRequests.delete(folderId)
-      })
-
-    this.tradesRequests.set(folderId, request)
-    return request
+    const all = await this.fetchAllTrades(options?.force)
+    return all.filter((t) => t.folderId === folderId)
   }
 
   async fetchTradeByLocation(
@@ -275,15 +326,17 @@ export class BookmarksService {
     trades: BookmarksTradeStruct[],
     folderId: string
   ): Promise<BookmarksTradeStruct[]> {
-    const safeTrades = this.normalizeTrades(
-      trades.map((t) => ({ ...t, id: t.id || uniqueId() }))
-    )
-    this.tradesCache.set(folderId, safeTrades)
-    await storageService.setValue(
-      `${TRADES_PREFIX_KEY}--${folderId}`,
-      safeTrades
-    )
-    return [...safeTrades]
+    const all = await this.fetchAllTrades()
+    // Replace this folder's slice; other folders' trades are untouched. Order
+    // within the folder is preserved (we filter by folderId when reading).
+    const others = all.filter((t) => t.folderId !== folderId)
+    const mine = trades.map((t) => ({
+      ...t,
+      folderId,
+      id: t.id || uniqueId()
+    }))
+    const saved = await this.persistAllTrades([...others, ...mine])
+    return saved.filter((t) => t.folderId === folderId)
   }
 
   async deleteTrade(
@@ -299,12 +352,72 @@ export class BookmarksService {
 
   async deleteFolder(folderId: string) {
     const folders = await this.fetchFolders()
-    const updated = folders.filter((f) => f.id !== folderId)
+    // Cascade: remove the folder together with any of its sub-folders. The
+    // existing per-key deletion → sync-tombstone path propagates each removal.
+    const removeIds = new Set(collectFolderAndDescendantIds(folders, folderId))
+    const updated = folders.filter((f) => !f.id || !removeIds.has(f.id))
     await this.persistFolders(updated)
-    this.tradesCache.delete(folderId)
-    this.tradesRequests.delete(folderId)
-    await storageService.deleteValue(`${TRADES_PREFIX_KEY}--${folderId}`)
+    // Drop all trades belonging to the removed folder(s) from the single store.
+    const all = await this.fetchAllTrades(true)
+    const kept = all.filter((t) => !t.folderId || !removeIds.has(t.folderId))
+    if (kept.length !== all.length) await this.persistAllTrades(kept)
     await this.refresh()
+  }
+
+  getChildFolders(
+    folders: BookmarksFolderStruct[],
+    parentId: string
+  ): BookmarksFolderStruct[] {
+    return folders.filter((f) => f.parentId === parentId)
+  }
+
+  // Create a sub-folder under a top-level folder. Enforces the one-level rule:
+  // returns null if the target is missing or is itself a sub-folder.
+  async createSubfolder(
+    parentId: string,
+    base: Partial<BookmarksFolderStruct>
+  ): Promise<string | null> {
+    const folders = await this.fetchFolders()
+    const parent = folders.find((f) => f.id === parentId)
+    if (!parent || isSubfolder(parent)) return null
+    return this.persistFolder({
+      ...this.initializeFolderStruct(parent.version, base),
+      parentId,
+      version: parent.version,
+      realm: parent.realm
+    })
+  }
+
+  // Move a saved search from one folder to another, keeping its id (plan A):
+  // delete-from-source + add-to-target. Not atomic across the two synced
+  // groups; the load-time de-dupe safeguard heals the rare duplicate a
+  // concurrent edit during propagation can leave behind.
+  // Move a saved search between folders. Single-store model: this is one
+  // item's `folderId` field changing in ONE synced list — atomic under the sync
+  // merge (newer stamp wins), so no cross-group race, no resurrection, no
+  // duplicate. The id is preserved (it's an edit, not delete+add).
+  async moveTradeToFolder(
+    tradeId: string,
+    fromFolderId: string,
+    toFolderId: string
+  ): Promise<boolean> {
+    if (!tradeId || fromFolderId === toFolderId) return false
+
+    const all = await this.fetchAllTrades(true)
+    const index = all.findIndex(
+      (t) => t.id === tradeId && t.folderId === fromFolderId
+    )
+    if (index === -1) return false
+
+    const next = [...all]
+    // Category ids are folder-scoped, so drop it when changing folders.
+    next[index] = { ...next[index], folderId: toFolderId, categoryId: null }
+    await this.persistAllTrades(next)
+
+    this.notifyChange({ tradesChanged: true, folderId: fromFolderId })
+    this.notifyChange({ tradesChanged: true, folderId: toFolderId })
+    await this.refresh()
+    return true
   }
 
   async duplicateTrade(
@@ -419,8 +532,11 @@ export class BookmarksService {
     options: { version: TradeSiteVersion; realm?: TradeRealm; archived: boolean }
   ) {
     const folders = await this.fetchFolders()
+    // Drag-reorder acts on top-level folders only; sub-folders keep their spot
+    // (they are grouped under their parent at render time, not by array order).
     const matchingFolders = folders.filter(
       (folder) =>
+        !folder.parentId &&
         folder.version === options.version &&
         (options.realm === undefined ||
           (folder.realm ?? "intl") === options.realm) &&
@@ -541,11 +657,11 @@ export class BookmarksService {
 
   // ─── EXPORT / IMPORT ──────────────────────────────────────
 
-  serializeFolder(
+  private buildExportPayload(
     folder: BookmarksFolderStruct,
     trades: BookmarksTradeStruct[]
-  ): string {
-    const payload: ExportedFolderStruct = {
+  ): ExportedFolderStruct {
+    return {
       icn: folder.icon as string,
       tit: folder.title,
       ver: folder.version,
@@ -559,7 +675,79 @@ export class BookmarksService {
         cat: t.categoryId || undefined
       }))
     }
-    return `5:${encodeBase64Utf8(JSON.stringify(payload))}`
+  }
+
+  serializeFolder(
+    folder: BookmarksFolderStruct,
+    trades: BookmarksTradeStruct[]
+  ): string {
+    return `5:${encodeBase64Utf8(JSON.stringify(this.buildExportPayload(folder, trades)))}`
+  }
+
+  // Export a top-level folder together with its sub-folders (and their trades).
+  // Backward compatible: v5 importers ignore `subs`; v6 importers restore them.
+  async serializeFolderTree(
+    folder: BookmarksFolderStruct,
+    trades: BookmarksTradeStruct[]
+  ): Promise<string> {
+    const payload = this.buildExportPayload(folder, trades)
+    const children = get(this.foldersStore).filter(
+      (f) => f.id && f.parentId === folder.id
+    )
+    if (children.length > 0) {
+      const subs: ExportedFolderStruct[] = []
+      for (const child of children) {
+        const childTrades = await this.fetchTradesByFolderId(child.id!)
+        subs.push(this.buildExportPayload(child, childTrades))
+      }
+      payload.subs = subs
+    }
+    return `6:${encodeBase64Utf8(JSON.stringify(payload))}`
+  }
+
+  private decodeExportPayload(
+    payload: ExportedFolderStruct,
+    exportVersion: ExportVersion
+  ): [BookmarksFolderStruct, BookmarksTradeStruct[]] {
+    const folder: BookmarksFolderStruct = {
+      version: "1",
+      icon: payload.icn as BookmarksFolderIcon,
+      title: payload.tit,
+      archivedAt: null,
+      categories: []
+    }
+
+    if (exportVersion >= 3 && payload.ver) {
+      folder.version = payload.ver
+    }
+
+    if (exportVersion >= 5 && Array.isArray(payload.cats)) {
+      folder.categories = payload.cats
+        .filter((category) => category.id && category.tit)
+        .map((category) => ({ id: category.id, title: category.tit }))
+    }
+
+    const trades: BookmarksTradeStruct[] = payload.trs.map((trade) => {
+      let version: string, type: string, slug: string, league: string | null
+      if (exportVersion >= 4) {
+        ;[version, type, league, slug] = trade.loc.split(":")
+      } else if (exportVersion >= 3) {
+        ;[version, type, slug] = trade.loc.split(":")
+        league = null
+      } else {
+        version = "1"
+        ;[type, slug] = trade.loc.split(":")
+        league = null
+      }
+      return {
+        title: trade.tit,
+        completedAt: null,
+        categoryId: exportVersion >= 5 && trade.cat ? trade.cat : null,
+        location: { version: version as TradeSiteVersion, type, slug, league }
+      }
+    })
+
+    return [folder, trades]
   }
 
   deserializeFolder(
@@ -569,52 +757,35 @@ export class BookmarksService {
       const exportVersion = this.parseExportVersion(serializedFolder)
       const json = this.jsonFromExportString(exportVersion, serializedFolder)
       const payload: ExportedFolderStruct = JSON.parse(json)
+      return this.decodeExportPayload(payload, exportVersion)
+    } catch {
+      return null
+    }
+  }
 
-      const folder: BookmarksFolderStruct = {
-        version: "1",
-        icon: payload.icn as BookmarksFolderIcon,
-        title: payload.tit,
-        archivedAt: null,
-        categories: []
-      }
-
-      if (exportVersion >= 3 && payload.ver) {
-        folder.version = payload.ver
-      }
-
-      if (exportVersion >= 5 && Array.isArray(payload.cats)) {
-        folder.categories = payload.cats
-          .filter((category) => category.id && category.tit)
-          .map((category) => ({ id: category.id, title: category.tit }))
-      }
-
-      const trades: BookmarksTradeStruct[] = payload.trs.map((trade) => {
-        let version: string, type: string, slug: string, league: string | null
-        if (exportVersion >= 4) {
-          ;[version, type, league, slug] = trade.loc.split(":")
-        } else if (exportVersion >= 3) {
-          ;[version, type, slug] = trade.loc.split(":")
-          league = null
-        } else {
-          version = "1"
-          ;[type, slug] = trade.loc.split(":")
-          league = null
-        }
-        return {
-          title: trade.tit,
-          completedAt: null,
-          categoryId: exportVersion >= 5 && trade.cat ? trade.cat : null,
-          location: { version: version as TradeSiteVersion, type, slug, league }
-        }
-      })
-
-      return [folder, trades]
+  // Like deserializeFolder, but also returns bundled sub-folders (v6).
+  deserializeFolderTree(serializedFolder: string): {
+    folder: BookmarksFolderStruct
+    trades: BookmarksTradeStruct[]
+    children: [BookmarksFolderStruct, BookmarksTradeStruct[]][]
+  } | null {
+    try {
+      const exportVersion = this.parseExportVersion(serializedFolder)
+      const json = this.jsonFromExportString(exportVersion, serializedFolder)
+      const payload: ExportedFolderStruct = JSON.parse(json)
+      const [folder, trades] = this.decodeExportPayload(payload, exportVersion)
+      const children =
+        exportVersion >= 6 && Array.isArray(payload.subs)
+          ? payload.subs.map((sub) => this.decodeExportPayload(sub, exportVersion))
+          : []
+      return { folder, trades, children }
     } catch {
       return null
     }
   }
 
   private parseExportVersion(exportString: string): ExportVersion {
+    if (exportString.startsWith("6:")) return 6
     if (exportString.startsWith("5:")) return 5
     if (exportString.startsWith("4:")) return 4
     if (exportString.startsWith("3:")) return 3

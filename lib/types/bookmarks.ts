@@ -21,6 +21,9 @@ export interface BookmarksTradeStruct {
   location: BookmarksTradeLocation
   completedAt: string | null
   categoryId?: string | null
+  // Which folder this saved search belongs to (single-store model). Absent only
+  // transiently before it is written through persistTrades.
+  folderId?: string
 }
 
 export interface BookmarksCategoryStruct {
@@ -31,6 +34,9 @@ export interface BookmarksCategoryStruct {
 export interface BookmarksFolderStruct {
   id?: string
   title: string
+  // One-level nesting: a folder with a parentId is a sub-folder of that parent.
+  // Absent/undefined = top-level. Sub-folders never hold their own sub-folders.
+  parentId?: string | null
   version: TradeSiteVersion
   // Which server this folder belongs to. Absent on folders created before realm
   // scoping existed — those are treated as international ("intl").

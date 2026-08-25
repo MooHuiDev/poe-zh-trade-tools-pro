@@ -26,7 +26,7 @@
 與多項便利功能,並可選擇將交易站中文化(繁體或簡體),且中英雙向皆可搜尋。
 
 ### 功能
-- 書籤與資料夾:儲存交易搜尋
+- 書籤與資料夾:儲存交易搜尋;支援子資料夾(一層),搜尋可用拖曳或選單在資料夾間搬移
 - 搜尋歷史
 - 結果工具:混沌石 / 神聖石 / 崇高石等值定價(透過 poe.ninja)、快速屬性 / 武器 /
   價格篩選預設
@@ -52,7 +52,7 @@ optionally translate the trade site into Traditional or Simplified Chinese with
 search that works in both Chinese and English.
 
 ### Features
-- Bookmarks and folders for saved trade searches
+- Bookmarks and folders for saved trade searches — with one level of sub-folders, and moving searches between folders by drag or menu
 - Search history
 - Result tools: Chaos / Divine / Exalted equivalent pricing (via poe.ninja),
   quick stat / weapon / price filter presets

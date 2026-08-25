@@ -33,6 +33,8 @@
     selectedCategoryId?: string | null;
     onCategorySelect?: (categoryId: string | null) => void;
     onCategoryCreate?: (title: string) => void | Promise<void>;
+    moveTargets?: { id: string; title: string }[];
+    onMoveToFolder?: (folderId: string) => void;
   }
 
   let {
@@ -49,7 +51,9 @@
     categoryOptions = [],
     selectedCategoryId = null,
     onCategorySelect = () => {},
-    onCategoryCreate = () => {}
+    onCategoryCreate = () => {},
+    moveTargets = [],
+    onMoveToFolder = () => {}
   }: Props = $props();
 
   type TradeAction = {
@@ -128,6 +132,7 @@
   );
   let dropdownActions = $derived(actions.filter((action) => !inlineActions.includes(action)));
   let hasCategoryMenu = $derived(categoriesEnabled);
+  let hasMoveMenu = $derived(moveTargets.length > 0);
   const stopAndRun = (handler: () => void) => (event: MouseEvent) => {
     event.stopPropagation();
     handler();
@@ -299,6 +304,38 @@
       );
     }
 
+    if (hasMoveMenu) {
+      if (dropdownActions.length > 0 || hasCategoryMenu) {
+        const divider = document.createElement("div");
+        divider.className = "trade-action-menu-portal__divider";
+        root.appendChild(divider);
+      }
+
+      const heading = document.createElement("div");
+      heading.className = "trade-action-menu-portal__heading";
+      heading.textContent = translate($languageStore, "folder.moveToFolder");
+      root.appendChild(heading);
+
+      for (const target of moveTargets) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "trade-action-menu-portal__category";
+        const marker = document.createElement("span");
+        marker.className = "trade-action-menu-portal__category-marker";
+        marker.setAttribute("aria-hidden", "true");
+        const label = document.createElement("span");
+        label.className = "trade-action-menu-portal__label";
+        label.textContent = target.title;
+        button.append(marker, label);
+        button.addEventListener("click", (event) => {
+          event.stopPropagation();
+          closeMenu();
+          onMoveToFolder(target.id);
+        });
+        root.appendChild(button);
+      }
+    }
+
     document.body.appendChild(root);
     menuRoot = root;
     positionMenuFrame();
@@ -394,7 +431,7 @@
       </button>
     {/each}
 
-    {#if dropdownActions.length > 0 || hasCategoryMenu}
+    {#if dropdownActions.length > 0 || hasCategoryMenu || hasMoveMenu}
       <button
         type="button"
         class="trade-action-btn"
