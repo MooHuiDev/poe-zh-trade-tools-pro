@@ -59,9 +59,6 @@ export default defineContentScript({
       [cn ? "zhCore_cn_items" : "zhCore_items"]: "lscache-tradeitems"
     }
 
-    const STATS_LS = "lscache-tradestats"
-    const statsStoreKey = cn ? "zhCore_cn_stats" : "zhCore_stats"
-
     let cache: Record<string, unknown> = {}
 
     const inject = () => {
@@ -92,63 +89,18 @@ export default defineContentScript({
       return injected
     }
 
-    // Session guard so the one-time corrective reload (below) can never loop.
-    const RELOAD_GUARD = "zhcore-reloaded"
-
+    // Populate lscache-* from the background-fetched translated data. Since the
+    // 2026 trade update, the site no longer reads these keys to render — the
+    // MAIN-world API translator (zh-api-i18n) reads them and serves them for the
+    // /api/trade/data/* requests instead — so no corrective reload is needed.
     try {
-      chrome.storage.local.get(
-        Object.keys(STORE_TO_LS),
-        (data) => {
-          cache = (data as Record<string, unknown>) || {}
-          const stored = cache[statsStoreKey]
-          const haveOurStats = Array.isArray(stored)
-
-          // What the app booted with (read BEFORE we rewrite lscache). The Vue
-          // app reads its stats cache synchronously at boot and keeps it in
-          // memory, so if we change it afterwards the app won't see the change
-          // until it re-reads — hence the corrective reload below.
-          const bootedStats = localStorage.getItem(STATS_LS)
-
-          inject()
-          // Insurance re-applies (cover minor timing gaps as the app boots).
-          ;[0, 80, 200, 500, 1000].forEach((delay) => setTimeout(inject, delay))
-
-          // If what we inject differs from what the app booted with, the app has
-          // stale stats in memory — reload once so it re-reads before the user
-          // can search. Guarded so it can't loop: after the reload bootedStats
-          // equals our injected list, so `changed` is false and we don't reload.
-          const serialized = haveOurStats ? JSON.stringify(stored) : null
-          const changed = !!serialized && serialized !== bootedStats
-
-          let reloaded = false
-          try {
-            reloaded = sessionStorage.getItem(RELOAD_GUARD) === "1"
-          } catch {
-            // sessionStorage unavailable — skip the corrective reload.
-          }
-
-          if (!changed) {
-            try {
-              sessionStorage.removeItem(RELOAD_GUARD)
-            } catch {
-              // ignore
-            }
-          } else if (haveOurStats && !reloaded) {
-            try {
-              sessionStorage.setItem(RELOAD_GUARD, "1")
-            } catch {
-              // ignore
-            }
-            setTimeout(() => {
-              try {
-                location.reload()
-              } catch {
-                // ignore
-              }
-            }, 60)
-          }
-        }
-      )
+      chrome.storage.local.get(Object.keys(STORE_TO_LS), (data) => {
+        cache = (data as Record<string, unknown>) || {}
+        inject()
+        // Re-apply briefly: the API translator reads these lscache keys, and the
+        // site may issue its data requests before this async read has landed.
+        ;[0, 80, 200, 500, 1000].forEach((delay) => setTimeout(inject, delay))
+      })
     } catch {
       // chrome.storage unavailable — nothing to inject.
     }
