@@ -420,6 +420,37 @@ export class BookmarksService {
     return true
   }
 
+  // upgrade-on-open: replace a bookmark's soon-to-expire short-id slug with the
+  // trade site's new self-contained long slug (captured when the user opens it).
+  // Matches by slug + league + version so only the right saved search changes.
+  async upgradeBookmarkSlug(
+    oldSlug: string,
+    newSlug: string,
+    league: string | null,
+    version: TradeSiteVersion
+  ): Promise<number> {
+    if (!oldSlug || !newSlug || oldSlug === newSlug) return 0
+    const all = await this.fetchAllTrades(true)
+    let changed = 0
+    const next = all.map((t) => {
+      if (
+        t.location?.slug === oldSlug &&
+        t.location?.version === version &&
+        (t.location?.league ?? null) === (league ?? null)
+      ) {
+        changed++
+        return { ...t, location: { ...t.location, slug: newSlug } }
+      }
+      return t
+    })
+    if (changed > 0) {
+      await this.persistAllTrades(next)
+      this.notifyChange({ tradesChanged: true })
+      await this.refresh()
+    }
+    return changed
+  }
+
   async duplicateTrade(
     trade: BookmarksTradeStruct,
     targetFolderId: string

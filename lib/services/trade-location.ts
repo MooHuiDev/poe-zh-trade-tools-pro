@@ -17,6 +17,8 @@ import { getActiveTradeTab } from "./active-trade-tab"
 import { languageStore, translate } from "./i18n"
 import { searchPanelService } from "./search-panel"
 import { storageService } from "./storage"
+import { bookmarksService } from "./bookmarks"
+import { isLongSlug, isSlugUpgrade, type UpgradeCandidate } from "./slug-upgrade"
 
 const DEFAULT_BASE_URL = "https://www.pathofexile.com"
 const HISTORY_KEY = "trade-history"
@@ -63,6 +65,9 @@ export class TradeLocationService {
   private activeTabTrackingStarted = false
   private focusHandler: (() => void) | null = null
   private blurHandler: (() => void) | null = null
+  // upgrade-on-open: remember a short-id slug just seen so we can catch the
+  // site auto-converting it to the long form and store that back.
+  private slugUpgradeCandidate: UpgradeCandidate | null = null
   private activeTabUpdatedHandler:
     | ((
         tabId: number,
@@ -111,7 +116,9 @@ export class TradeLocationService {
     // captured (most visible on a fresh realm like Garena TW, where the history
     // starts empty). Record the current search once up front — maybeLogHistory
     // de-duplicates and ignores non-search pages, so this is safe to call.
-    void this.maybeLogHistory(this.parseCurrentPath())
+    const initial = this.parseCurrentPath()
+    void this.maybeLogHistory(initial)
+    this.trackSlugUpgrade(initial)
 
     // Also listen for focus/blur to pause/resume
     if (!this.focusHandler) {
@@ -280,6 +287,34 @@ export class TradeLocationService {
       this.lastLocation = current
       this.notify(old, current)
       void this.maybeLogHistory(current)
+      this.trackSlugUpgrade(current)
+    }
+  }
+
+  // Watch for the trade site rewriting a short-id URL into its long, permanent
+  // form and store that back onto any bookmark with the short slug. Guarded so
+  // it can't be fooled by the user navigating/editing into a different search
+  // right after opening (see slug-upgrade.ts).
+  private trackSlugUpgrade(loc: ExactTradeLocationStruct) {
+    if (!loc.slug || !loc.type) return
+    if (isLongSlug(loc.slug)) {
+      const candidate = this.slugUpgradeCandidate
+      this.slugUpgradeCandidate = null
+      if (isSlugUpgrade(candidate, loc, Date.now())) {
+        void bookmarksService.upgradeBookmarkSlug(
+          candidate!.slug,
+          loc.slug,
+          loc.league,
+          loc.version
+        )
+      }
+    } else {
+      this.slugUpgradeCandidate = {
+        slug: loc.slug,
+        league: loc.league,
+        version: loc.version,
+        at: Date.now()
+      }
     }
   }
 

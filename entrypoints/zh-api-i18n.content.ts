@@ -1,4 +1,5 @@
 import { tradeHosts, isNativeChineseTradeSite } from "~/lib/config/trade-hosts"
+import { appendMissingGroups } from "~/lib/poe-zh-core/trade-data-merge"
 
 /**
  * Trade-data API translator (MAIN world).
@@ -67,7 +68,13 @@ export default defineContentScript({
         if (!arr) return real
         const json = await real.clone().json()
         if (!json || !Array.isArray(json.result)) return real
-        json.result = arr
+        // Use the Taiwan-translated data (full Chinese, correct structure), then
+        // append any GROUP the live response has that Taiwan lacks (kept as-is =
+        // English) so a brand-new filter/stat section GGG ships before Taiwan
+        // catches up stays visible/searchable instead of disappearing. We never
+        // touch Taiwan's own entries, so option-type stats stay Chinese (no
+        // mixed output — the reason the earlier per-entry "merge" was dropped).
+        json.result = appendMissingGroups(arr, json.result)
         return new Response(JSON.stringify(json), {
           status: real.status,
           statusText: real.statusText,
