@@ -1,5 +1,5 @@
 {
- "_note": "Hand-curated stat-template fixes. scripts/gen-stat-templates.mjs applies these LAST so regeneration never overwrites them. Add an entry here whenever you fix a mod translation by hand (official mistranslation, digit order, multi-line split, gem-name normalization).",
+ "_note": "Hand-curated stat-template fixes. scripts/gen-stat-templates.mjs applies these LAST so regeneration never overwrites them. Add an entry here whenever you fix a mod translation by hand (official mistranslation, digit order, multi-line split, gem-name normalization). manualOnly: lines translated by hand because the game had no official Chinese yet; the generator warns when an official translation appears. officialErrors: keys pinned because the official TW text is wrong (direction / numbers), checked against EN + 簡中.",
  "tw": {
   "#ofdamagefromhitsistakenfromthebuffbeforeyourlifeorenergyshield": "受到的擊中傷害有 #% 會先由該增益效果承受，再由你的生命或能量護盾承受",
   "buffcantakedamageequalto#ofyourarmouruptoamaximumof#": "該增益效果可承受相當於你護甲值 #% 的傷害，最多為 #",
@@ -2495,7 +2495,39 @@
   "socketedspellsaresupportedbylevel#volley": "插槽中法術被等級 # 的齊射輔助",
   "socketedspellsaresupportedbylevel#windburst": "插槽中法術被等級 # 的風破輔助",
   "socketedspellsaresupportedbylevel#witheringtouch": "插槽中法術被等級 # 的凋零之觸輔助",
-  "socketedgemsdeal#moredamagepersocketedskillgem": "插槽中的寶石每有一個插槽中的技能寶石，造成 #% 更多傷害"
+  "socketedgemsdeal#moredamagepersocketedskillgem": "插槽中的寶石每有一個插槽中的技能寶石，造成 #% 更多傷害",
+  "#reducedchargerecovery": "減少 #% 充能恢復",
+  "#reducedeffect#tothisvaluewhenused": "減少 #% 效果。使用時 #% 此數值",
+  "minionshave#lessmaximumlife": "召喚物有 #% 更少最大生命",
+  "#reducedmeleecolddamage": "減少 #% 近戰冰冷傷害",
+  "#reducedelementaldamagewithweaponsduringanyflaskeffect": "任何藥劑效果持續時間內，減少 #% 武器的元素傷害",
+  "arcanistbrandhas#reducedcastspeed": "奧術烙印減少 #% 施放速度",
+  "#reduceddamagewithailmentsfromattackskillswhilewieldingaclaw": "持爪時攻擊技能減少 #% 異常狀態傷害",
+  "#reducedcostefficiencyofattacks": "減少 #% 攻擊的消耗效用",
+  "#reducedmanacostefficiencyper#devotion": "每 10 個奉獻減少 #% 魔力消耗效用",
+  "#reducedmanacostefficiencywhileonlowmana": "貧魔時減少 #% 魔力消耗效用",
+  "#reduceddefenceswhilewieldingastaff": "持長杖時，減少 #% 防禦f",
+  "#reducedenergyshieldfromequippedhelmet": "減少 #% 裝備的頭盔的能量護盾",
+  "hallowingflameyouinflicthas#reducedmagnitudeper#attackblockchance": "每2%攻擊格擋機率，減少#%你施加的聖徒烈火幅度",
+  "#reducedspelldamagewhileyouhavearcanesurge": "當你有秘能波動時減少 #% 法術傷害",
+  "chillenemiesasthoughdealing#lessdamage": "冰緩敵人有如造成 #% 更少傷害",
+  "#reducedchanceformemorytracestoleadtowardstheincarnationoffear": "減少#%記憶之痕導引至恐懼化身的機率",
+  "#reducedchanceformemorytracestoleadtowardstheincarnationofneglect": "減少#%記憶之痕導引至漠視化身的機率",
+  "uniquemonstersinyourmapshave#reducedtoughnessper#mappacksize": "你的地圖每有1%怪物群大小，即減少#%傳奇怪物的堅韌",
+  "cursedenemiestake#reducedphysicaldamagefromdamageovertime": "被詛咒的敵人減少承受 #% 物理持續傷害",
+  "supportedskillsdeal#lesstrapandminedamage": "被輔助的技能造成 #% 更少陷阱和地雷傷害",
+  "#reducedagilityexperiencegained": "減少 #% 獲得靈敏經驗值",
+  "buffgrants#reducedcooldownrecoveryrate": "增益效果減少 #% 冷卻時間恢復率",
+  "explosiondeals#reduceddamageifthecorpseisignited": "若屍體被點燃，爆炸減少 #% 傷害",
+  "runesdeal#lessdamagewithhitsandailmentsperimprovement": "符文每次優化造成 #% 更少擊中和異常狀態傷害",
+  "#chancetotriggerlevel#summonragingspiritonkill": "擊殺時有 #% 機率觸發等級 # 的召喚憤怒狂靈",
+  "triggerlevel#summonragingspiritonkill": "擊殺時觸發等級 # 的召喚憤怒狂靈",
+  "minionsdeal#increaseddamageper#dexterity": "每 5 點敏捷增加 #% 召喚物所造成的傷害",
+  "minionsdeal#reduceddamageper#dexterity": "每 5 點敏捷減少 #% 召喚物所造成的傷害",
+  "#chancetoblockattackdamageifthereareatleast#enemieswithin#metres": "若 6 公尺內至少有 5 名敵人，#% 攻擊傷害格擋率",
+  "gain#barkeachsecondifyouhaventbeenhitbyanenemyattackrecently": "若你近期沒有被敵人攻擊擊中，每秒獲得 # 層木質",
+  "everysecondtimeyoucasteachspellgainmanaequaltoitsupfrontcost": "你每第二次施放各個法術時，獲得等同於其前期消耗的魔力",
+  "decoydevouringandrejuvenationtotemsreflect#oftheirmaximumlifeasfiredamagetoenemieswithinabaseradiusof#metreswhenhit": "誘餌圖騰、吞噬圖騰和回春圖騰被擊中時，反射 #% 它們最大生命的火焰傷害至 1.8 公尺內的敵人"
  },
  "cn": {
   "#ofdamagefromhitsistakenfromthebuffbeforeyourlifeorenergyshield": "#% 的击中伤害在作用于你的生命或能量护盾前由增益效果受到",
@@ -5206,6 +5238,50 @@
    "skillssocketedinyourhelmetaresupportedbylevel#magnetism",
    "skillssocketedinyourhelmetaresupportedbylevel#powerchargeoncriticalstrike",
    "skillssocketedinyourhelmetaresupportedbylevel#ward"
+  ]
+ },
+ "manualOnly": {
+  "tw": [
+   "socketedgemsdeal#moredamagepersocketedskillgem"
+  ],
+  "cn": [
+   "socketedgemsdeal#moredamagepersocketedskillgem"
+  ]
+ },
+ "officialErrors": {
+  "tw": [
+   "#chancetoblockattackdamageifthereareatleast#enemieswithin#metres",
+   "#chancetotriggerlevel#summonragingspiritonkill",
+   "#reducedagilityexperiencegained",
+   "#reducedchanceformemorytracestoleadtowardstheincarnationoffear",
+   "#reducedchanceformemorytracestoleadtowardstheincarnationofneglect",
+   "#reducedchargerecovery",
+   "#reducedcostefficiencyofattacks",
+   "#reduceddamagewithailmentsfromattackskillswhilewieldingaclaw",
+   "#reduceddefenceswhilewieldingastaff",
+   "#reducedeffect#tothisvaluewhenused",
+   "#reducedelementaldamagewithweaponsduringanyflaskeffect",
+   "#reducedenergyshieldfromequippedhelmet",
+   "#reducedmanacostefficiencyper#devotion",
+   "#reducedmanacostefficiencywhileonlowmana",
+   "#reducedmeleecolddamage",
+   "#reducedspelldamagewhileyouhavearcanesurge",
+   "arcanistbrandhas#reducedcastspeed",
+   "buffgrants#reducedcooldownrecoveryrate",
+   "chillenemiesasthoughdealing#lessdamage",
+   "cursedenemiestake#reducedphysicaldamagefromdamageovertime",
+   "decoydevouringandrejuvenationtotemsreflect#oftheirmaximumlifeasfiredamagetoenemieswithinabaseradiusof#metreswhenhit",
+   "everysecondtimeyoucasteachspellgainmanaequaltoitsupfrontcost",
+   "explosiondeals#reduceddamageifthecorpseisignited",
+   "gain#barkeachsecondifyouhaventbeenhitbyanenemyattackrecently",
+   "hallowingflameyouinflicthas#reducedmagnitudeper#attackblockchance",
+   "minionsdeal#increaseddamageper#dexterity",
+   "minionsdeal#reduceddamageper#dexterity",
+   "minionshave#lessmaximumlife",
+   "runesdeal#lessdamagewithhitsandailmentsperimprovement",
+   "supportedskillsdeal#lesstrapandminedamage",
+   "triggerlevel#summonragingspiritonkill",
+   "uniquemonstersinyourmapshave#reducedtoughnessper#mappacksize"
   ]
  }
 }

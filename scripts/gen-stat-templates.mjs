@@ -201,8 +201,41 @@ const mapLine = (en, zh) => {
   return (out + zh.slice(last)).trim().replace(/#-(?=#)/g, '#–')
 }
 
+// Fallback for lines mapLine rejects because Chinese puts the numbers in a
+// different order ("Trigger Level 20 X after spending {0}%" -> "消耗{0}%…等級20")
+// or the English hard-codes a value the Chinese writes as a placeholder
+// ("Contains an additional Unique Item" -> "內含 {0} 個…", cond "1").
+// Output uses INDEXED placeholders "#{k}" = the k-th number of the rendered
+// English line (every number counts, literals included — same as the runtime's
+// number list). These go to separate `twIdx` / `cnIdx` maps that only newer
+// extension versions read, so older versions never see the new syntax.
+const mapLineIdx = (en, zh, conds) => {
+  const fixed = (i) => (/^-?\d+$/.test(conds[i] || '') ? conds[i] : null)
+  const E = tokens(en), C = tokens(zh), used = new Array(E.length).fill(false)
+  let out = '', last = 0, any = false
+  for (const c of C) {
+    let rep = zh.slice(c.s, c.e)
+    if (c.t === 'p') {
+      const k = E.findIndex((e, j) => !used[j] && e.t === 'p' && e.i === c.i)
+      if (k >= 0) { used[k] = true; rep = `#{${k}}`; any = true }
+      else {
+        const f = fixed(c.i)
+        if (f === null) return null // a Chinese value the English line doesn't have
+        rep = /:\+/.test(rep) && !f.startsWith('-') ? `+${f}` : f
+      }
+    }
+    // Chinese literal numbers stay literal (the value is constant).
+    out += zh.slice(last, c.s) + rep; last = c.e
+  }
+  // English placeholders missing in Chinese are only fine when their value is fixed.
+  if (E.some((e, j) => e.t === 'p' && !used[j] && fixed(e.i) === null)) return null
+  if (!any && !C.some((c) => c.t === 'p')) return null // nothing gained over mapLine
+  return (out + zh.slice(last)).trim()
+}
+
 const LANG = { tw: 'Traditional Chinese', cn: 'Simplified Chinese' }
 const gen = { tw: {}, cn: {} }
+const genIdx = { tw: {}, cn: {} }
 // Combined multi-line key -> its single-line keys (see the merge step).
 const combinedParts = { tw: {}, cn: {} }
 const stat = { descriptions: 0, lines: 0, emitted: { tw: 0, cn: 0 }, skippedNumbers: { tw: 0, cn: 0 }, skippedLines: { tw: 0, cn: 0 }, conflicts: { tw: 0, cn: 0 } }
@@ -217,6 +250,9 @@ for (const file of csdFiles) {
       const byCond = new Map(zhVars.filter(Boolean).map((v) => [v.cond, v]))
       d.en.forEach((ev, k) => {
         if (!ev || !ev.text) return
+        // "[DNT]" = GGG's "do not translate": internal / unused, never shown.
+        if (ev.text.startsWith('[DNT]')) return
+        const conds = (ev.cond || '').trim().split(/\s+/)
         const zv = zhVars.length === d.en.length ? zhVars[k] : byCond.get(ev.cond)
         if (!zv || !zv.text) return
         const enLines = stripMarkup(ev.text).split('\\n')
@@ -230,6 +266,10 @@ for (const file of csdFiles) {
           const enFull = enLines.join('\\n'), zhFull = zhLines.join('\\n')
           const key = normEn(enFull.replace(PLACEHOLDER, '#'))
           const val = mapLine(enFull, zhFull)
+          if (key && val === null && !(key in genIdx[L])) {
+            const iv = mapLineIdx(enFull, zhFull, conds)
+            if (iv) genIdx[L][key] = iv
+          }
           if (key && val) {
             if (!(key in gen[L])) {
               gen[L][key] = val; stat.emitted[L]++
@@ -242,7 +282,14 @@ for (const file of csdFiles) {
           const key = normEn(enLine.replace(PLACEHOLDER, '#'))
           if (!key || key === '#') return
           const val = mapLine(enLine, zhLines[j])
-          if (val === null) { stat.skippedNumbers[L]++; return }
+          if (val === null) {
+            stat.skippedNumbers[L]++
+            if (!(key in genIdx[L])) {
+              const iv = mapLineIdx(enLine, zhLines[j], conds)
+              if (iv) genIdx[L][key] = iv
+            }
+            return
+          }
           if (!val) return
           if (key in gen[L]) { if (gen[L][key] !== val) stat.conflicts[L]++; return }
           gen[L][key] = val; stat.emitted[L]++
@@ -285,9 +332,30 @@ for (const L of ['tw', 'cn']) {
   r.removed = 0
   for (const k of (overrides.remove && overrides.remove[L]) || []) { if (k in base) { delete base[k]; r.removed++ } }
   result[L] = base
+  // Indexed templates: regenerated from scratch each run, only for keys that
+  // have no regular template (the regular map always wins at runtime too).
+  const idx = {}
+  // (skip keys with "##": two adjacent placeholders are names, not numbers)
+  for (const [k, v] of Object.entries(genIdx[L])) if (!(k in base) && !k.includes('##')) idx[k] = v
+  result[L + 'Idx'] = idx
+  r.indexed = Object.keys(idx).length
+  // Reminder: lines we translated by hand because the official text had no
+  // Chinese (overrides.manualOnly). Once the game ships an official translation
+  // the generator now produces one — list it so the maintainer can decide.
+  r.officialNowAvailable = ((overrides.manualOnly && overrides.manualOnly[L]) || [])
+    .filter((k) => k in gen[L] || k in genIdx[L])
+    .map((k) => ({ key: k, ours: (overrides[L] || {})[k], official: gen[L][k] ?? genIdx[L][k] }))
   report[L] = r
 }
 if (VERSION) result.version = VERSION
 fs.writeFileSync(outPath, JSON.stringify(result))
-log('wrote', outPath, '| tw', Object.keys(result.tw).length, 'cn', Object.keys(result.cn).length)
+log('wrote', outPath, '| tw', Object.keys(result.tw).length, 'cn', Object.keys(result.cn).length,
+  '| indexed tw', Object.keys(result.twIdx).length, 'cn', Object.keys(result.cnIdx).length)
+for (const L of ['tw', 'cn']) {
+  for (const o of report[L].officialNowAvailable) {
+    log(`⚠ [${L}] official translation now available for a hand-translated line:`, o.key)
+    log('    ours    :', o.ours)
+    log('    official:', o.official)
+  }
+}
 console.log(JSON.stringify({ stat, report }, null, 1))
