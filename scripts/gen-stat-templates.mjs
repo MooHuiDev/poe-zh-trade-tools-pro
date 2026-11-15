@@ -178,21 +178,24 @@ const tokens = (s) => {
 // Returns the Chinese line as a "#" template, or null when numbers can't be
 // filled in the right order by the runtime.
 const mapLine = (en, zh) => {
-  const E = tokens(en), C = tokens(zh), used = new Array(E.length).fill(false), map = []
+  // The runtime fills the template's "#"s, left to right, with the numbers of
+  // the rendered English line in order. So the Chinese tokens turned into "#"
+  // must point at English tokens 0,1,2… in order. A Chinese literal number that
+  // isn't next in line (e.g. "每移除100生命…有{0}%") can simply stay literal.
+  const E = tokens(en), C = tokens(zh), used = new Array(E.length).fill(false)
+  let next = 0, out = '', last = 0
   for (const c of C) {
-    let k
-    if (c.t === 'p') k = E.findIndex((e, j) => !used[j] && e.t === 'p' && e.i === c.i)
-    else { k = E.findIndex((e, j) => !used[j] && e.t === 'l' && e.v === c.v); if (k < 0) { map.push(null); continue } }
-    if (k < 0) return null // a Chinese placeholder the English line doesn't have
-    used[k] = true; map.push(k)
+    const k = c.t === 'p'
+      ? E.findIndex((e, j) => !used[j] && e.t === 'p' && e.i === c.i)
+      : E.findIndex((e, j) => !used[j] && e.t === 'l' && e.v === c.v)
+    let rep = zh.slice(c.s, c.e)
+    if (k === next && k >= 0) { used[k] = true; next++; rep = '#' }
+    else if (c.t === 'p') return null // placeholder missing or out of order
+    out += zh.slice(last, c.s) + rep; last = c.e
   }
-  const ks = map.filter((x) => x !== null)
-  for (let j = 0; j < ks.length; j++) if (ks[j] !== j) return null
   // Every English placeholder must appear, otherwise the value belongs to a
   // different line (e.g. a sentence re-split across "\n" in Chinese).
   if (E.some((e, j) => e.t === 'p' && !used[j])) return null
-  let out = '', last = 0
-  C.forEach((c, j) => { out += zh.slice(last, c.s) + (map[j] !== null ? '#' : zh.slice(c.s, c.e)); last = c.e })
   // The runtime treats "-#" as a signed placeholder, so a range written "#-#"
   // would swallow the dash ("5-6" -> "56"). Use an en dash for ranges.
   return (out + zh.slice(last)).trim().replace(/#-(?=#)/g, '#–')
@@ -217,6 +220,19 @@ for (const file of csdFiles) {
         const enLines = stripMarkup(ev.text).split('\\n')
         const zhLines = stripMarkup(zv.text).split('\\n')
         if (enLines.length !== zhLines.length) { stat.skippedLines[L] += enLines.length; return }
+        // Multi-line stats: also store the whole text as ONE template (key keeps
+        // the line break as "n", value keeps "\\n"). The results page tries these
+        // first, so lines that only make sense together (Chinese often reorders
+        // the halves) still translate.
+        if (enLines.length > 1) {
+          const enFull = enLines.join('\\n'), zhFull = zhLines.join('\\n')
+          const key = normEn(enFull.replace(PLACEHOLDER, '#'))
+          const val = mapLine(enFull, zhFull)
+          if (key && val) {
+            if (!(key in gen[L])) { gen[L][key] = val; stat.emitted[L]++ }
+            else if (gen[L][key] !== val) stat.conflicts[L]++
+          }
+        }
         enLines.forEach((enLine, j) => {
           if (L === 'tw') stat.lines++
           const key = normEn(enLine.replace(PLACEHOLDER, '#'))
