@@ -2494,7 +2494,8 @@
   "socketedspellsaresupportedbylevel#volatility": "插槽中法術被等級 # 的易變輔助",
   "socketedspellsaresupportedbylevel#volley": "插槽中法術被等級 # 的齊射輔助",
   "socketedspellsaresupportedbylevel#windburst": "插槽中法術被等級 # 的風破輔助",
-  "socketedspellsaresupportedbylevel#witheringtouch": "插槽中法術被等級 # 的凋零之觸輔助"
+  "socketedspellsaresupportedbylevel#witheringtouch": "插槽中法術被等級 # 的凋零之觸輔助",
+  "socketedgemsdeal#moredamagepersocketedskillgem": "插槽中的寶石每有一個插槽中的技能寶石，造成 #% 更多傷害"
  },
  "cn": {
   "#ofdamagefromhitsistakenfromthebuffbeforeyourlifeorenergyshield": "#% 的击中伤害在作用于你的生命或能量护盾前由增益效果受到",
@@ -5110,7 +5111,8 @@
   "socketedspellsaresupportedbylevel#volley": "插上的法术被 # 级的齐射辅助",
   "socketedspellsaresupportedbylevel#windburst": "插上的法术被 # 级的风爆术辅助",
   "socketedspellsaresupportedbylevel#witheringtouch": "插上的法术被 # 级的凋零之触辅助",
-  "theattacktimeofyourmainhandweapon": "你主手武器的攻击时间"
+  "theattacktimeofyourmainhandweapon": "你主手武器的攻击时间",
+  "socketedgemsdeal#moredamagepersocketedskillgem": "每个镶嵌的技能宝石使镶嵌的宝石伤害总增 #%"
  },
  "remove": {
   "tw": [
