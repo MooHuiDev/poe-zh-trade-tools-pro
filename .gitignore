@@ -58,6 +58,9 @@ tmp_video_frames/
 push.bat
 tag-release.bat
 
+# local quarantine for files pending deletion (review then delete the folder)
+_removable.local/
+
 # internal store copy sheet — keep private (PRIVACY-POLICY.md stays public)
 store/STORE-LISTING.md
 store/AMO-SUBMISSION.md

@@ -142,10 +142,17 @@ const buildModMap = (twStats: StatGroup[], usStats: StatGroup[] | null) => {
 
   const map: Record<string, ModInfo> = {}
   for (const group of twStats) {
-    if (group.id === "pseudo") continue // pseudo texts ("total ...") aren't item mods
+    // Pseudo stats ("+#% total to Cold Resistance") are shown under the item on
+    // the results page when the search filters on them (data-hash
+    // "pseudo.pseudo_…"), so they need a translation too. The official Chinese
+    // often drops "total" (same text as the real mod), so mark it as a total.
+    const isPseudo = group.id === "pseudo"
     for (const entry of group.entries ?? []) {
       if (!entry.id || !entry.text || entry.id in map) continue
-      const info: ModInfo = { tw: entry.text }
+      let tw = entry.text
+      if (isPseudo && /\btotal\b/i.test(usTextById[entry.id] || "") && !/[總总]/.test(tw))
+        tw += "（總計）"
+      const info: ModInfo = { tw }
       if (usTextById[entry.id]) info.us = usTextById[entry.id]
 
       if (entry.option?.options && usOptById[entry.id]) {
@@ -244,7 +251,14 @@ const buildStats = (
         ...entry,
         text,
         option,
-        type: (entry.id && twLabelById[entry.id]) || group.label || entry.type
+        // The site decides which filters are pseudo stats by checking
+        // `type === "pseudo"` (it then adds `pseudos[]=` to the fetch so the
+        // "+#% total to …" lines are returned). Keep that one value untouched,
+        // otherwise pseudo lines silently disappear from the results.
+        type:
+          entry.type === "pseudo"
+            ? entry.type
+            : (entry.id && twLabelById[entry.id]) || group.label || entry.type
       }
     })
   }))

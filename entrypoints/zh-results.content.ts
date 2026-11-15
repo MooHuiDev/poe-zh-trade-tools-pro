@@ -1,4 +1,6 @@
 import { NOTABLES_ZH_TW } from "~/lib/poe-zh-core/notables"
+import { GEM_TAGS_TW, PROPERTY_STRINGS_TW } from "~/lib/poe-zh-core/property-strings"
+import { toSimplified } from "~/lib/poe-zh-cn/convert"
 import { tradeHosts } from "~/lib/config/trade-hosts"
 import { getTradeTranslationState } from "~/lib/services/trade-translation"
 
@@ -219,7 +221,79 @@ export default defineContentScript({
       }
     }
 
+    // Item property / requirement lines ("Lasts 8 Seconds", "Physical Damage:
+    // 10-20", "Requires Level 12, 50 Str"). Each label span holds text nodes with
+    // the values as child spans, e.g. `Recovers <span>120</span> Mana over
+    // <span>4</span> Seconds`. Build the English key with the values as "{}",
+    // look up the official ClientStrings text and rebuild the span in Chinese
+    // order, moving the original value spans so their colours are kept.
+    const PROPS: Record<string, string> = {}
+    const TAGS: Record<string, string> = {}
+    const toLang = (zh: string) => (state.language === "zh-cn" ? toSimplified(zh) : zh)
+    for (const [en, zh] of Object.entries(PROPERTY_STRINGS_TW)) PROPS[en] = toLang(zh)
+    for (const [en, zh] of Object.entries(GEM_TAGS_TW)) TAGS[en] = toLang(zh)
+    const translatePropertySpan = (span: HTMLElement) => {
+      const nodes = Array.from(span.childNodes)
+      let key = ""
+      let hasLetters = false
+      const values: ChildNode[] = []
+      for (const n of nodes) {
+        if (n.nodeType === Node.TEXT_NODE) {
+          const t = n.nodeValue || ""
+          if (/[A-Za-z]/.test(t)) hasLetters = true
+          key += t
+        } else if (n.nodeType === Node.ELEMENT_NODE) {
+          key += "{}"
+          values.push(n)
+        }
+      }
+      if (!hasLetters || hasChinese(key)) return
+      const norm = key.replace(/\s+/g, " ").trim()
+      // Requirement line: "Requires {}, {}, {}" (each value is a "Level 12" /
+      // "50 Str" span translated on its own) -> "需求 {0}, {1}, {2}".
+      const req = /^Requires \{\}(?:, \{\})*$/.test(norm)
+        ? `${PROPS["Requires"] || "需求"} ` +
+          values.map((_, i) => `{${i}}`).join(", ")
+        : undefined
+      let zh = req || PROPS[norm]
+      if (!zh && !values.length) {
+        // Plain text spans: gem values with the numbers inline ("12 Mana",
+        // "8.00 sec (3 uses)", "80% of base"), labels with a colon
+        // ("Experience:") and gem tag lists ("Attack, AoE, Melee").
+        const nums = norm.match(/\d+(?:\.\d+)?/g) || []
+        const numTpl = nums.length ? PROPS[norm.replace(/\d+(?:\.\d+)?/g, "{}")] : undefined
+        const colon = norm.endsWith(":") ? PROPS[norm.slice(0, -1).trim()] : undefined
+        const parts = norm.split(", ")
+        const tagList = parts.every((p) => TAGS[p]) ? parts.map((p) => TAGS[p]).join(", ") : undefined
+        const text = numTpl
+          ? numTpl.replace(/\{(\d+)\}/g, (_, i) => nums[+i] ?? "")
+          : colon
+            ? `${colon}:`
+            : tagList
+        if (text) span.textContent = key.replace(norm, text)
+        return
+      }
+      if (!zh) return
+      const lead = /^\s/.test(key) ? " " : ""
+      const trail = /\s$/.test(key) ? " " : ""
+      const frag = document.createDocumentFragment()
+      if (lead) frag.appendChild(document.createTextNode(lead))
+      for (const part of zh.split(/(\{\d+\})/)) {
+        const m = part.match(/^\{(\d+)\}$/)
+        if (m) {
+          const v = values[+m[1]]
+          if (v) frag.appendChild(v)
+        } else if (part) frag.appendChild(document.createTextNode(part))
+      }
+      if (trail) frag.appendChild(document.createTextNode(trail))
+      span.replaceChildren(frag)
+    }
+    const translateProperty = (el: HTMLElement) => {
+      el.querySelectorAll<HTMLElement>("span").forEach(translatePropertySpan)
+    }
+
     const translateWithin = (root: ParentNode) => {
+      root.querySelectorAll<HTMLElement>(".item-property").forEach(translateProperty)
       root.querySelectorAll<HTMLElement>(".item-mod").forEach(translateMod)
       root.querySelectorAll<HTMLElement>(NOTABLE_SPAN).forEach(translateNotable)
     }
@@ -267,6 +341,7 @@ export default defineContentScript({
       queued = []
       for (const node of batch) {
         if (node.matches?.(".item-mod")) translateMod(node)
+        if (node.matches?.(".item-property")) translateProperty(node)
         if (node.matches?.(NOTABLE_SPAN)) translateNotable(node)
         translateWithin(node)
       }

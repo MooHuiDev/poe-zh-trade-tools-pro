@@ -53,6 +53,24 @@ export const UI_STRINGS: Record<string, string> = {
   "Sort": "排序",
   "Copy": "複製",
 
+  // Result card footer (defence / DPS summary), per the official site's
+  // translate.zh_TW.js
+  "Base Percentile": "基礎百分比",
+  "Armour": "護甲",
+  "Evasion": "閃避",
+  "Energy Shield": "能量護盾",
+  "E. Shield": "能量護盾",
+  "Ward": "保護",
+  "Block": "格擋",
+  "Quality": "品質",
+  "DPS": "每秒傷害",
+  "pDPS": "每秒物理傷害",
+  "eDPS": "每秒元素傷害",
+  "Physical DPS": "物理傷害",
+  "Elemental DPS": "元素傷害",
+  "Damage per Second": "每秒傷害",
+  "Critical Chance": "暴擊機率",
+
   // Bulk exchange
   "I want": "我想要",
   "I have": "我擁有",

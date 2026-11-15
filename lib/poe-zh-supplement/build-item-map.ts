@@ -210,6 +210,71 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
       return true
     }
 
+    // Anchors = entries whose Chinese we already know, matched to the same
+    // Chinese in the TW list. Every (US index, TW index) candidate is collected
+    // (a Chinese name can occur more than once) and the LONGEST chain that
+    // increases in both lists is kept (LIS). The old greedy "first match after
+    // the previous anchor" could lock onto a wrong duplicate early (e.g. two
+    // "To Dust" entries) and then shift every later pairing in the category.
+    const alignAnchors = (
+      U: TradeEntry[],
+      T: TradeEntry[],
+      enOf: (e: TradeEntry) => string,
+      zhOf: (e: TradeEntry) => string,
+      knownZh: (en: string) => string | undefined
+    ): Array<{ i: number; j: number }> => {
+      const tByZh = new Map<string, number[]>()
+      T.forEach((e, j) => {
+        const zh = zhOf(e)
+        if (!zh) return
+        const list = tByZh.get(zh)
+        if (list) list.push(j)
+        else tByZh.set(zh, [j])
+      })
+      // Candidates ordered by i ascending, j DESCENDING within the same i, so a
+      // strictly increasing subsequence on j uses each i at most once.
+      const cands: Array<{ i: number; j: number }> = []
+      U.forEach((e, i) => {
+        const en = enOf(e)
+        const zh = en ? knownZh(en) : undefined
+        const js = zh ? tByZh.get(zh) : undefined
+        if (js) for (let k = js.length - 1; k >= 0; k--) cands.push({ i, j: js[k] })
+      })
+      if (!cands.length) return []
+      // Patience-sort LIS on j with predecessor links.
+      const tails: number[] = [] // index into cands
+      const prev = new Array<number>(cands.length).fill(-1)
+      for (let c = 0; c < cands.length; c++) {
+        let lo = 0
+        let hi = tails.length
+        while (lo < hi) {
+          const mid = (lo + hi) >> 1
+          if (cands[tails[mid]].j < cands[c].j) lo = mid + 1
+          else hi = mid
+        }
+        if (lo > 0) prev[c] = tails[lo - 1]
+        tails[lo] = c
+      }
+      const chain: Array<{ i: number; j: number }> = []
+      for (let c = tails[tails.length - 1]; c >= 0; c = prev[c]) chain.push(cands[c])
+      return chain.reverse()
+    }
+    // The gaps before, between and after anchors: [usFrom, usTo, twFrom, twTo].
+    const segmentsBetween = (
+      anchors: Array<{ i: number; j: number }>,
+      uLen: number,
+      tLen: number
+    ) => {
+      const segs: Array<[number, number, number, number]> = []
+      let p = { i: -1, j: -1 }
+      for (const a of anchors) {
+        segs.push([p.i + 1, a.i - 1, p.j + 1, a.j - 1])
+        p = a
+      }
+      segs.push([p.i + 1, uLen - 1, p.j + 1, tLen - 1])
+      return segs
+    }
+
     // Anchor-aligned pairing (robust to count mismatch). Uses entries whose
     // English we already know a Chinese for (bundled dict or a value already in
     // `map`) as anchors, matches them to the same Chinese in the TW list, then
@@ -218,33 +283,15 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
     // skipped, so one discrepancy never poisons the rest of the category.
     const anchorPairEntries = (U: TradeEntry[], T: TradeEntry[]) => {
       if (!U.length || !T.length) return
-      const knownZh = (en: string) => TW_DICT[normalize(en)] || map[normalize(en)]
-      const usedT = new Array(T.length).fill(false)
-      const anchors: Array<{ i: number; j: number }> = []
-      let start = 0
-      for (let i = 0; i < U.length; i++) {
-        const en = fieldOf(U[i])
-        if (!en || hasChinese(en)) continue
-        const zh = knownZh(en)
-        if (!zh) continue
-        for (let k = start; k < T.length; k++) {
-          if (!usedT[k] && fieldOf(T[k]) === zh) {
-            anchors.push({ i, j: k })
-            usedT[k] = true
-            start = k + 1
-            break
-          }
-        }
-      }
+      // GEM_TW (official gem names) also anchors, so the gem category aligns
+      // even when few gems are already in `map` (e.g. right after a new league).
+      const knownZh = (en: string) =>
+        TW_DICT[normalize(en)] || map[normalize(en)] || GEM_TW[normalize(en)]
+      const anchors = alignAnchors(U, T, fieldOf, fieldOf, (en) =>
+        en && !hasChinese(en) ? knownZh(en) : undefined
+      )
       if (!anchors.length) return
-      const segs: Array<[number, number, number, number]> = []
-      let prev = { i: -1, j: -1 }
-      for (const a of anchors) {
-        segs.push([prev.i + 1, a.i - 1, prev.j + 1, a.j - 1])
-        prev = a
-      }
-      segs.push([prev.i + 1, U.length - 1, prev.j + 1, T.length - 1])
-      for (const [ui0, ui1, tj0, tj1] of segs) {
+      for (const [ui0, ui1, tj0, tj1] of segmentsBetween(anchors, U.length, T.length)) {
         const uc = ui1 - ui0 + 1
         const tc = tj1 - tj0 + 1
         if (uc <= 0 || uc !== tc) continue
@@ -299,29 +346,9 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
         (e) => e.name && hasChinese(e.name)
       )
       if (!U.length || !T.length) return
-      const usedT = new Array(T.length).fill(false)
-      const anchors: Array<{ i: number; j: number }> = []
-      let start = 0
-      for (let i = 0; i < U.length; i++) {
-        const zh = TW_DICT[normalize(U[i].name || "")]
-        if (!zh) continue
-        for (let k = start; k < T.length; k++) {
-          if (!usedT[k] && (T[k].name || "").trim() === zh) {
-            anchors.push({ i, j: k })
-            usedT[k] = true
-            start = k + 1
-            break
-          }
-        }
-      }
-      const segs: Array<[number, number, number, number]> = []
-      let prev = { i: -1, j: -1 }
-      for (const a of anchors) {
-        segs.push([prev.i + 1, a.i - 1, prev.j + 1, a.j - 1])
-        prev = a
-      }
-      segs.push([prev.i + 1, U.length - 1, prev.j + 1, T.length - 1])
-      for (const [ui0, ui1, tj0, tj1] of segs) {
+      const nameOf = (e: TradeEntry) => (e.name || "").trim()
+      const anchors = alignAnchors(U, T, nameOf, nameOf, (en) => TW_DICT[normalize(en)])
+      for (const [ui0, ui1, tj0, tj1] of segmentsBetween(anchors, U.length, T.length)) {
         const uc = ui1 - ui0 + 1
         const tc = tj1 - tj0 + 1
         if (uc <= 0 || uc !== tc) continue // only pair gap-free equal segments
@@ -329,6 +356,12 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
           const eng = (U[ui0 + d].name || "").trim()
           const zh = (T[tj0 + d].name || "").trim()
           if (!eng || !zh || hasChinese(eng) || !hasChinese(zh)) continue
+          // Base-type sanity check: when we already know the base type's Chinese
+          // and it doesn't match the TW entry's base, the two aren't the same
+          // item (the segment is shifted) — skip rather than guess.
+          const usBaseZh = map[normalize(U[ui0 + d].type || "")]
+          const twBase = (T[tj0 + d].type || "").trim()
+          if (usBaseZh && twBase && usBaseZh !== twBase) continue
           const key = normalize(eng)
           if (key && !TW_DICT[key] && !derivedUnique[key]) derivedUnique[key] = zh
         }
@@ -374,6 +407,11 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
     // and Garena TW lists order the variants differently — "Eye of Winter of
     // Transience" ends up mapped to an unrelated gem. Pair them precisely by
     // (translated base type + disc) instead, and OVERWRITE any wrong value.
+    // Fill missing base gem names from GEM_TW BEFORE the disc pairing below, so
+    // a transfigured gem can still be paired when its base gem wasn't paired by
+    // position (the pairing looks the base up in `map`).
+    for (const [k, v] of Object.entries(GEM_TW)) if (v && !map[k]) map[k] = v
+
     const twTextByTypeDisc = new Map<string, string>()
     for (const cat of twCategories) {
       for (const e of cat.entries ?? []) {

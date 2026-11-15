@@ -470,6 +470,68 @@ export const initFilterPanel = () => {
     const hashes = (detail.types || "").split(",").filter(Boolean)
     const prefix = detail.prefix || "pseudo.pseudo_"
 
+    const app = getGlobalApp()
+    const store = app?.$store
+    const stats = store?.state?.persistent?.stats
+
+    // Preferred path: drive the trade site's Vuex store directly.
+    //
+    // The trade site moved its search UI to Vue 3, so the old `$children`
+    // component traversal (ItemSearchGroupsVueItems) no longer finds
+    // stat-filter-group instances and the quick-filter presets silently did
+    // nothing. The Vuex store is still a Vue 2 instance exposing
+    // setStatFilter / removeStatFilter — the same store the native result-row
+    // +/- buttons fall back to — so we go through it instead. This works on both
+    // the old (Vue 2) and new (Vue 3) trade builds.
+    //
+    // Store API (verified live):
+    //   setStatFilter    { group, value: <filterObj> }            → append
+    //   setStatFilter    { group, index, value: <filterObj> }     → replace at idx
+    //   removeStatFilter { group, index }                         → remove at idx
+    // where <filterObj> is { id, value: { min?, max? }, disabled }.
+    if (store?.commit && Array.isArray(stats) && stats.length) {
+      let gi = stats.findIndex((g: any) => g?.type === "and")
+      if (gi < 0) gi = 0
+      let reload = false
+
+      hashes.forEach((hash: string) => {
+        const reHashed = `${prefix}${modMap[hash]}`
+        const filters = stats[gi]?.filters || []
+        const idx = filters.findIndex((f: any) => f?.id === reHashed)
+
+        if (idx >= 0) {
+          const cur = filters[idx] || {}
+          const curMin = cur?.value?.min || 0
+          if (curMin || more) {
+            store.commit("setStatFilter", {
+              group: gi,
+              index: idx,
+              value: {
+                ...cur,
+                id: reHashed,
+                value: { ...(cur.value || {}), min: curMin + (more ? 10 : -10) },
+                disabled: false
+              }
+            })
+          } else {
+            store.commit("removeStatFilter", { group: gi, index: idx })
+          }
+          reload = true
+        } else if (more) {
+          store.commit("setStatFilter", {
+            group: gi,
+            value: { id: reHashed, value: {}, disabled: false }
+          })
+          reload = true
+        }
+      })
+
+      if (reload && typeof app?.save === "function") app.save(true)
+      return
+    }
+
+    // Legacy fallback: original Vue 2 component path, for any older trade build
+    // where the store isn't reachable but the component tree is.
     const ISG_AND = ItemSearchGroupsVueItems("and")?.find(
       (g: any) => g.index === 0
     )
