@@ -203,6 +203,8 @@ const mapLine = (en, zh) => {
 
 const LANG = { tw: 'Traditional Chinese', cn: 'Simplified Chinese' }
 const gen = { tw: {}, cn: {} }
+// Combined multi-line key -> its single-line keys (see the merge step).
+const combinedParts = { tw: {}, cn: {} }
 const stat = { descriptions: 0, lines: 0, emitted: { tw: 0, cn: 0 }, skippedNumbers: { tw: 0, cn: 0 }, skippedLines: { tw: 0, cn: 0 }, conflicts: { tw: 0, cn: 0 } }
 
 for (const file of csdFiles) {
@@ -229,8 +231,10 @@ for (const file of csdFiles) {
           const key = normEn(enFull.replace(PLACEHOLDER, '#'))
           const val = mapLine(enFull, zhFull)
           if (key && val) {
-            if (!(key in gen[L])) { gen[L][key] = val; stat.emitted[L]++ }
-            else if (gen[L][key] !== val) stat.conflicts[L]++
+            if (!(key in gen[L])) {
+              gen[L][key] = val; stat.emitted[L]++
+              combinedParts[L][key] = enLines.map((l) => normEn(l.replace(PLACEHOLDER, '#')))
+            } else if (gen[L][key] !== val) stat.conflicts[L]++
           }
         }
         enLines.forEach((enLine, j) => {
@@ -258,7 +262,13 @@ const result = { ...existing }
 for (const L of ['tw', 'cn']) {
   const base = { ...(existing[L] || {}) }
   const r = { added: 0, same: 0, differs: 0, updated: 0, overridden: 0, sampleDiffs: [] }
+  r.skippedCombined = 0
   for (const [k, v] of Object.entries(gen[L])) {
+    // The results page tries a combined multi-line template BEFORE single lines,
+    // so a new combined entry would hide a hand fix on one of its lines (e.g.
+    // Putrid Seed "四個" vs the official "一個"). Leave those to the single lines.
+    const parts = combinedParts[L][k]
+    if (parts && !(k in base) && parts.some((p) => overrides[L] && p in overrides[L])) { r.skippedCombined++; continue }
     if (!(k in base)) { base[k] = v; r.added++ }
     else if (base[k] === v) r.same++
     else {
