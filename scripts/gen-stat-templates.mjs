@@ -247,6 +247,69 @@ for (const file of csdFiles) {
   } else log('⚠ archnemesismods.datc64 layout changed? skipped')
   log('archnemesis names / effect texts added:', added)
 }
+// Other game texts that show up on trade result cards outside the mod lines:
+// affix names (Heavy / of Renown), gem descriptions, currency descriptions,
+// corpse implicits, flavour text, NPC / area / faction names, interface
+// labels … (English -> 繁中 by row, same column). Kept in a SEPARATE map
+// `twText` — the results page uses it for text that isn't a mod line; older
+// extension versions never read it. Traditional only (no Simplified tables).
+const genText = {}
+{
+  const SOURCES = [
+    ['data/mods.datc64', 98],            // affix / mod names
+    ['data/itemisedcorpse.datc64', 32],  // corpse implicits
+    ['data/currencyitems.datc64', 56],   // currency / divination descriptions
+    ['data/activeskills.datc64', 8],     // skill names
+    ['data/activeskills.datc64', 16],    // skill gem descriptions
+    ['data/gemeffects.datc64', 8],       // gem names
+    ['data/gemeffects.datc64', 80],      // support gem descriptions
+    ['data/worldareas.datc64', 8],       // area names (logbooks …)
+    ['data/expeditionfactions.datc64', 8],
+    ['data/npcs.datc64', 8],
+    ['data/npcs.datc64', 56],
+    ['data/heistobjectives.datc64', 20],
+    ['data/mercenarybuilds.datc64', 142],
+    ['data/flavourtext.datc64', 12],     // divination card / unique flavour
+    ['data/clientstrings.datc64', 8],    // interface labels
+    ['data/clientstrings2.datc64', 8]
+  ]
+  const read = (p) => readDatFile(p, readGameFile(p))
+  // key -> { zh -> count }: when the same English has different Chinese in
+  // different tables, keep the most common one (a few tables reword slightly).
+  const seen = {}
+  let pairs = 0
+  for (const [file, offset] of SOURCES) {
+    let en, zh
+    try {
+      en = readColumn({ offset, type: { string: {} } }, read(file))
+      zh = readColumn({ offset, type: { string: {} } }, read(file.replace('data/', 'data/traditional chinese/')))
+    } catch (e) { log('⚠ text source skipped:', file, e.message); continue }
+    en.forEach((e, i) => {
+      const z = zh[i]
+      if (!e || !z || e === z || !/[\u4e00-\u9fff]/.test(z) || !/[A-Za-z]{2}/.test(e)) return
+      if (/^Metadata|[\\/_]|\[\w+\]/.test(e)) return // ids, paths, keyword markup
+      const el = stripMarkup(e).split(/\r?\n/), zl = stripMarkup(z).split(/\r?\n/)
+      if (el.length !== zl.length) return
+      el.forEach((line, j) => {
+        const l = line.trim(), zline = zl[j].trim()
+        if (!l || !zline || l.length > 200 || !/[A-Za-z]{2}/.test(l) || /[<>{}]/.test(zline)) return
+        const key = normEn(l.replace(PLACEHOLDER, '#'))
+        if (!key || key.length < 3 || key === '#') return
+        const v = mapLine(l, zline)
+        if (!v) return
+        ;(seen[key] ??= {})[v] = (seen[key][v] || 0) + 1; pairs++
+      })
+    })
+  }
+  let multi = 0
+  for (const [k, m] of Object.entries(seen)) {
+    const best = Object.entries(m).sort((a, b) => b[1] - a[1])
+    if (best.length > 1) multi++
+    genText[k] = best[0][0]
+  }
+  log('other game texts:', Object.keys(genText).length, '(with several translations, most common kept:', multi + ')')
+}
+
 log('parsed descriptions:', stat.descriptions, '| english lines:', stat.lines)
 log('generated keys tw/cn:', Object.keys(gen.tw).length, Object.keys(gen.cn).length)
 
@@ -287,6 +350,7 @@ for (const L of ['tw', 'cn']) {
   // (skip keys with "##": two adjacent placeholders are names, not numbers)
   for (const [k, v] of Object.entries(genIdx[L])) if (!(k in base) && !k.includes('##')) idx[k] = v
   result[L + 'Idx'] = idx
+  if (L === 'tw') result.twText = genText
   r.indexed = Object.keys(idx).length
   // Reminder: lines we translated by hand because the official text had no
   // Chinese (overrides.manualOnly). Once the game ships an official translation
