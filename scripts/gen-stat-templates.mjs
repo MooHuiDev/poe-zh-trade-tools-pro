@@ -295,7 +295,11 @@ const genText = {}
         if (!l || !zline || l.length > 200 || !/[A-Za-z]{2}/.test(l) || /[<>{}]/.test(zline)) return
         const key = normEn(l.replace(PLACEHOLDER, '#'))
         if (!key || key.length < 3 || key === '#') return
-        const v = mapLine(l, zline)
+        let v = mapLine(l, zline)
+        if (!v) return
+        // Chinese label with a colon the English doesn't have ("Build" ->
+        // "流派：") would double up with the site's own ": ".
+        if (!/[:：]\s*$/.test(l)) v = v.replace(/\s*[:：]\s*$/, '')
         if (!v) return
         ;(seen[key] ??= {})[v] = (seen[key][v] || 0) + 1; pairs++
       })
