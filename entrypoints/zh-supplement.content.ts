@@ -76,8 +76,14 @@ export default defineContentScript({
     const UI_MAP: Record<string, string> = {}
     for (const [en, zh] of Object.entries(UI_STRINGS)) UI_MAP[normalize(en)] = s(zh)
 
+    // dynamicMap first: it is built by the background from the bundled dict
+    // MERGED with the remote unique-names.json (remote wins), so name fixes
+    // pushed to GitHub reach the page without a release. The bundled DICT is
+    // only the offline fallback. (Before 4.1.12 DICT came first, so a stale
+    // bundled name — e.g. Malachai's Loop 輪迴 instead of 馬拉凱的輪迴 — beat
+    // the fix, and the PoeDB / Wiki buttons couldn't map the name back.)
     const lookup = (key: string) =>
-      DICT[key] || dynamicMap[key] || UI_PHRASES[key] || UI_MAP[key]
+      dynamicMap[key] || DICT[key] || UI_PHRASES[key] || UI_MAP[key]
 
     // Mercenary Warrant skill block (`.item-mod--mercenary`): each skill lists its
     // granted supports as bare "<Support> (Tier N)" spans, e.g. "Faster Casting"
