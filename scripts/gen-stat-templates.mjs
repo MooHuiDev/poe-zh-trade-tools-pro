@@ -217,16 +217,21 @@ for (const file of csdFiles) {
   } else log('⚠ mods.datc64 layout changed? monster mod names skipped')
   log('monster mod names added:', added)
 }
-// Archnemesis modifiers shown on itemised beasts as their effect text
-// ("Extra Fire Damage and Exposure" -> 額外火焰傷害和曝曬): ArchnemesisMods,
-// effect text @48. Same rules as above.
+// Archnemesis modifiers on itemised beasts: some show their name ("Hasted" ->
+// 急速), some their effect text ("Extra Fire Damage and Exposure" ->
+// 額外火焰傷害和曝曬). ArchnemesisMods: name @16, effect text @48. Same rules
+// as above; only plain English words/phrases.
 {
   const read = (p) => readDatFile(p, readGameFile(p))
   const E = read('data/archnemesismods.datc64'), Z = read('data/traditional chinese/archnemesismods.datc64')
-  const en = readColumn({ offset: 48, type: { string: {} } }, E)
-  const zh = readColumn({ offset: 48, type: { string: {} } }, Z)
+  const en = [], zh = []
+  for (const offset of [16, 48]) {
+    en.push(...readColumn({ offset, type: { string: {} } }, E))
+    zh.push(...readColumn({ offset, type: { string: {} } }, Z))
+  }
   const names = {}, amb = new Set()
   en.forEach((e, i) => {
+    if (e && !/^[A-Za-z][A-Za-z ,'-]*$/.test(e)) return
     if (!e || !zh[i] || e === zh[i] || !/[\u4e00-\u9fff]/.test(zh[i]) || /\d/.test(e)) return
     if (names[e] && names[e] !== zh[i]) amb.add(e)
     names[e] = zh[i]
@@ -240,7 +245,7 @@ for (const file of csdFiles) {
       gen.tw[key] = z; added++
     }
   } else log('⚠ archnemesismods.datc64 layout changed? skipped')
-  log('archnemesis effect texts added:', added)
+  log('archnemesis names / effect texts added:', added)
 }
 log('parsed descriptions:', stat.descriptions, '| english lines:', stat.lines)
 log('generated keys tw/cn:', Object.keys(gen.tw).length, Object.keys(gen.cn).length)
