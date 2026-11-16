@@ -13,6 +13,12 @@
 // sent to the international API, so it must stay English).
 
 import { convertDeep } from "~/lib/poe-zh-cn/convert"
+import {
+  parseSiteTranslations,
+  TW_SITE_TRANSLATE_URL,
+  UI_STRING_OVERRIDES
+} from "~/lib/poe-zh-core/site-ui-strings"
+import { loadRemoteStatTemplates } from "~/lib/poe-zh-core/remote-stat-templates"
 
 const TW_API = "https://pathofexile.tw/api/trade/data/"
 const US_API = "https://www.pathofexile.com/api/trade/data/"
@@ -21,8 +27,7 @@ const US_API = "https://www.pathofexile.com/api/trade/data/"
 // stats the Taiwan trade API happens NOT to expose, e.g. option-based map-boss
 // stats like "Map is occupied by The Purifier"). Used as a fallback so the Stat
 // Filter shows Chinese for those too, matching the results-page translation.
-const REMOTE_STAT_URL =
-  "https://raw.githubusercontent.com/MooHuiDev/poe-zh-trade-tools-pro/main/data/stat-templates.json"
+// (downloaded once and shared with build-item-map — see remote-stat-templates.ts)
 
 type StatTpl = Record<string, string>
 
@@ -47,9 +52,20 @@ const resolveKw = (value: string): string =>
 
 const fetchStatTpl = async (): Promise<{ tw?: StatTpl; cn?: StatTpl } | null> => {
   try {
-    const r = await fetch(REMOTE_STAT_URL, { credentials: "omit", cache: "no-cache" })
-    if (!r.ok) return null
-    return (await r.json()) as { tw?: StatTpl; cn?: StatTpl }
+    const st = await loadRemoteStatTemplates()
+    if (!st) return null
+    // The filter list shows templates with "#" (no numbers filled in), so the
+    // indexed form "#{k}" just becomes "#". Regular templates win on conflicts.
+    const plain = (idx?: StatTpl): StatTpl => {
+      const out: StatTpl = {}
+      for (const [k, v] of Object.entries(idx || {}))
+        out[k] = v.replace(/#\{\d+\}/g, "#")
+      return out
+    }
+    return {
+      tw: st.tw ? { ...plain(st.twIdx), ...st.tw } : undefined,
+      cn: st.cn ? { ...plain(st.cnIdx), ...st.cn } : undefined
+    }
   } catch {
     return null
   }
@@ -389,6 +405,19 @@ export const refreshTradeData = async (force = false): Promise<void> => {
       console.error("[zh-core] filters fetch failed", e)
     }
 
+    // The Taiwan trade site's own interface strings ("Showing {COUNT} results",
+    // "listed … ago", buttons, tooltips …). Parsed as text, never evaluated.
+    // Sanity floor so a changed / error page never replaces a good table.
+    try {
+      const r = await fetch(TW_SITE_TRANSLATE_URL, { credentials: "omit", cache: "no-cache" })
+      if (r.ok) {
+        const ui = parseSiteTranslations(await r.text())
+        if (Object.keys(ui).length >= 500) out.zhCore_ui = { ...ui, ...UI_STRING_OVERRIDES }
+      }
+    } catch (e) {
+      console.error("[zh-core] site ui strings fetch failed", e)
+    }
+
     // Simplified-Chinese (国服) variants: OpenCC-convert the Traditional data we
     // just built (+ curated 台服->国服 term overrides). Same shapes, so the
     // content scripts only need to pick the "cn" storage key by language.
@@ -397,6 +426,7 @@ export const refreshTradeData = async (force = false): Promise<void> => {
       if (out.zhCore_static) out.zhCore_cn_static = convertDeep(out.zhCore_static)
       if (out.zhCore_filters) out.zhCore_cn_filters = convertDeep(out.zhCore_filters)
       if (out.zhCore_modmap) out.zhCore_cn_modmap = convertDeep(out.zhCore_modmap)
+      if (out.zhCore_ui) out.zhCore_cn_ui = convertDeep(out.zhCore_ui)
     } catch (e) {
       console.error("[zh-core] simplified conversion failed", e)
     }

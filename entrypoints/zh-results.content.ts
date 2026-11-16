@@ -1,6 +1,8 @@
 import { NOTABLES_ZH_TW } from "~/lib/poe-zh-core/notables"
 import { GEM_TAGS_TW, PROPERTY_STRINGS_TW } from "~/lib/poe-zh-core/property-strings"
 import { toSimplified } from "~/lib/poe-zh-cn/convert"
+import { translateLine } from "~/lib/poe-zh-core/stat-translate"
+import { resolvePropertyText } from "~/lib/poe-zh-core/property-translate"
 import { tradeHosts } from "~/lib/config/trade-hosts"
 import { getTradeTranslationState } from "~/lib/services/trade-translation"
 
@@ -25,6 +27,10 @@ export default defineContentScript({
       state.language === "zh-cn" ? "zhCore_cn_modmap" : "zhCore_modmap"
     const statTplKey =
       state.language === "zh-cn" ? "zhStatTpl_cn" : "zhStatTpl_tw"
+    // Other game texts (affix names, descriptions, names …) — Traditional only.
+    const statTextKey = state.language === "zh-cn" ? "" : "zhStatText_tw"
+    const statTplIdxKey =
+      state.language === "zh-cn" ? "zhStatTplIdx_cn" : "zhStatTplIdx_tw"
 
     const hasChinese = (value: string) => /[一-鿿]/.test(value)
     // A signed number, used both to read rendered values and to fill templates.
@@ -39,19 +45,10 @@ export default defineContentScript({
     // translate ANY mod line (including non-filterable unique mods with no trade
     // stat id) by matching the rendered English and filling in the numbers.
     let statTpl: Record<string, string> = {}
-    const normEn = (s: string) =>
-      s
-        .replace(/\[([^\]|]+)(?:\|[^\]]*)?\]/g, "$1") // [English|中文] -> English
-        .replace(/[+\-]?\d+(?:\.\d+)?/g, "#") // numbers -> #
-        .toLowerCase()
-        .replace(/[^a-z#]/g, "")
-    const translateByTemplate = (rendered: string): string | null => {
-      const tpl = statTpl[normEn(rendered)]
-      if (!tpl) return null
-      const values = rendered.match(NUM) || []
-      let i = 0
-      return tpl.replace(PLACEHOLDER, () => (i < values.length ? values[i++] : "#"))
-    }
+    let statTplIdx: Record<string, string> = {}
+    let statText: Record<string, string> = {}
+    const translateByTemplate = (rendered: string): string | null =>
+      translateLine(statTpl, statTplIdx, statText, rendered)
     // Resolve the game's "[English|中文]" inline keyword syntax that some trade
     // templates carry, so no raw brackets leak into the result.
     const resolveKw = (s: string) =>
@@ -112,9 +109,11 @@ export default defineContentScript({
                 const t = translateByTemplate(joined)
                 if (!t || t === joined) continue
                 const parts = t.split(/\\n?/)
-                if (parts.length !== window.length) continue
+                // Chinese sometimes says in ONE line what English needs two for
+                // (Phantasm support): first span gets it all, the rest go empty.
+                if (parts.length !== window.length && parts.length !== 1) continue
                 window.forEach((s, k) => {
-                  s.textContent = resolveKw(parts[k])
+                  s.textContent = parts.length === 1 ? (k === 0 ? resolveKw(parts[0]) : "") : resolveKw(parts[k])
                   doneSpans.add(s)
                 })
                 break matchRun
@@ -139,8 +138,10 @@ export default defineContentScript({
 
       // Pass 2: trade-stat fallback (from pathofexile.tw) for lines the
       // dictionary missed. Resolve any "[English|中文]" syntax it carries.
+      // Option stats carry the chosen option in the hash ("enchant.stat_…|23",
+      // cluster jewel enchants) — look the base stat id up then.
       const id = el.getAttribute("data-hash")
-      const info = id ? modMap[id] : undefined
+      const info = id ? (modMap[id] ?? modMap[id.split("|")[0]]) : undefined
       if (!info || !info.tw) return
 
       // Option-based mods (cluster jewel "grants: <sub-stat>"): only when nothing
@@ -151,25 +152,41 @@ export default defineContentScript({
         info.us.includes("#") &&
         remaining.length === lineSpans.length
       ) {
-        const rendered = field.textContent?.trim()
-        if (!rendered || hasChinese(rendered)) return
+        // Each line on its own: a cluster jewel can list SEVERAL options in one
+        // enchant ("…grant: 12% increased Damage with Bows" + "…with Bow Skills").
         const hashPos = info.us.indexOf("#")
         const prefix = info.us.slice(0, hashPos)
         const suffix = info.us.slice(hashPos + 1)
-        if (
-          rendered.startsWith(prefix) &&
-          rendered.endsWith(suffix) &&
-          rendered.length >= prefix.length + suffix.length
-        ) {
-          const fill = rendered
-            .slice(prefix.length, rendered.length - suffix.length)
-            .trim()
-          const twFill = info.opt[fill]
-          if (twFill) {
-            const span = field.querySelector<HTMLElement>("span") || field
-            span.textContent = resolveKw(info.tw.replace("#", twFill))
-          }
+        for (const span of remaining) {
+          const rendered = span.textContent?.trim()
+          if (!rendered || hasChinese(rendered)) continue
+          if (
+            !rendered.startsWith(prefix) ||
+            !rendered.endsWith(suffix) ||
+            rendered.length < prefix.length + suffix.length
+          )
+            continue
+          const fill = rendered.slice(prefix.length, rendered.length - suffix.length).trim()
+          // Option text as listed by the API, else translate the rendered option
+          // like any mod line (cluster jewel enchants carry real numbers).
+          const twFill = info.opt[fill] ?? translateByTemplate(fill) ?? undefined
+          if (twFill) span.textContent = resolveKw(info.tw.replace("#", twFill))
         }
+        return
+      }
+
+      // Multi-line fallback: the Taiwan text has one line per untranslated
+      // line (e.g. a cluster jewel enchant whose option grants two stats —
+      // Taiwan lists it as its own "…|38" stat). Fill each line's numbers.
+      const twLines = info.tw.split("\n")
+      if (twLines.length > 1 && twLines.length === remaining.length && remaining.length === lineSpans.length) {
+        remaining.forEach((span, k) => {
+          const values = (span.textContent || "").match(NUM) || []
+          let i = 0
+          span.textContent = resolveKw(
+            twLines[k].replace(PLACEHOLDER, () => (i < values.length ? values[i++] : "#"))
+          )
+        })
         return
       }
 
@@ -247,33 +264,14 @@ export default defineContentScript({
           values.push(n)
         }
       }
-      if (!hasLetters || hasChinese(key)) return
-      const norm = key.replace(/\s+/g, " ").trim()
-      // Requirement line: "Requires {}, {}, {}" (each value is a "Level 12" /
-      // "50 Str" span translated on its own) -> "需求 {0}, {1}, {2}".
-      const req = /^Requires \{\}(?:, \{\})*$/.test(norm)
-        ? `${PROPS["Requires"] || "需求"} ` +
-          values.map((_, i) => `{${i}}`).join(", ")
-        : undefined
-      let zh = req || PROPS[norm]
-      if (!zh && !values.length) {
-        // Plain text spans: gem values with the numbers inline ("12 Mana",
-        // "8.00 sec (3 uses)", "80% of base"), labels with a colon
-        // ("Experience:") and gem tag lists ("Attack, AoE, Melee").
-        const nums = norm.match(/\d+(?:\.\d+)?/g) || []
-        const numTpl = nums.length ? PROPS[norm.replace(/\d+(?:\.\d+)?/g, "{}")] : undefined
-        const colon = norm.endsWith(":") ? PROPS[norm.slice(0, -1).trim()] : undefined
-        const parts = norm.split(", ")
-        const tagList = parts.every((p) => TAGS[p]) ? parts.map((p) => TAGS[p]).join(", ") : undefined
-        const text = numTpl
-          ? numTpl.replace(/\{(\d+)\}/g, (_, i) => nums[+i] ?? "")
-          : colon
-            ? `${colon}:`
-            : tagList
-        if (text) span.textContent = key.replace(norm, text)
+      if (!hasLetters) return
+      const res = resolvePropertyText(key, values.length, PROPS, TAGS)
+      if (!res) return
+      if (res.kind === "text") {
+        span.textContent = res.text
         return
       }
-      if (!zh) return
+      const zh = res.zh
       const lead = /^\s/.test(key) ? " " : ""
       const trail = /\s$/.test(key) ? " " : ""
       const frag = document.createDocumentFragment()
@@ -292,9 +290,72 @@ export default defineContentScript({
       el.querySelectorAll<HTMLElement>("span").forEach(translatePropertySpan)
     }
 
+    // Affix names the site shows next to each mod ("Heavy (≥11)",
+    // "Serrated + Journeyman's (≥11)", "of Renown") — span.d in .item-mod.
+    const translateAffixNames = (mod: HTMLElement) => {
+      mod.querySelectorAll<HTMLElement>("span.d").forEach((d) => {
+        const w = document.createTreeWalker(d, NodeFilter.SHOW_TEXT)
+        let n: Node | null
+        while ((n = w.nextNode())) {
+          const raw = n.nodeValue || ""
+          const t = raw.trim()
+          if (!/[A-Za-z]{2}/.test(t) || hasChinese(t)) continue
+          const m = t.match(/^(.*?)(\s*\(≥\d+\))?$/)
+          if (!m) continue
+          const parts = m[1].split(" + ")
+          const zh = parts.map((p) => statText[p.toLowerCase().replace(/[^a-z#]/g, "")])
+          if (zh.every(Boolean) && hasChinese(zh.join(""))) n.nodeValue = raw.replace(t, zh.join(" + ") + (m[2] || ""))
+        }
+      })
+    }
+
+    // Leftover English inside a result card outside the mod lines: gem
+    // descriptions, currency descriptions, corpse implicits, logbook areas /
+    // factions, heist / mercenary names, card flavour, odd labels
+    // ("Unidentified", "Atlas Drops" …). Whole-text matches only.
+    const LEFTOVER_SKIP =
+      ".item-mod, .item-popup__header-line, .profile-link, .character-name, button, script, style, [class^='bt-'], [class*=' bt-']"
+    const LEFTOVER_BOX = ".item-popup__content, [class*='divination-card']"
+    const translateLeftovers = (box: HTMLElement) => {
+      const w = document.createTreeWalker(box, NodeFilter.SHOW_TEXT)
+      const todo: Text[] = []
+      let n: Node | null
+      while ((n = w.nextNode())) {
+        const t = (n.nodeValue || "").trim()
+        if (!/[A-Za-z]{2}/.test(t) || hasChinese(t) || t.startsWith("~")) continue
+        // Only look at ancestors INSIDE the card: <body> itself carries our
+        // "bt-…" classes, which would otherwise make every node look skipped.
+        const skip = (n.parentElement as HTMLElement | null)?.closest(LEFTOVER_SKIP)
+        if (skip && box.contains(skip)) continue
+        todo.push(n as Text)
+      }
+      for (const node of todo) {
+        const raw = node.nodeValue || ""
+        const t = raw.trim()
+        let zh = PROPS[t] ?? translateByTemplate(t)
+        // Multi-line text in one node (card flavour text): line by line.
+        if (!zh && /\n/.test(t)) {
+          const lines = t.split(/\r?\n/).map((l) => {
+            const x = l.trim()
+            return x ? (PROPS[x] ?? translateByTemplate(x)) : ""
+          })
+          if (lines.every((l) => l !== null)) zh = lines.join("\n")
+        }
+        // A Chinese label may carry a colon the English doesn't ("Build" ->
+        // "流派：") — the site prints its own ": " after it.
+        if (zh && !/[:：]\s*$/.test(t)) zh = zh.replace(/\s*[:：]\s*$/, "")
+        // Only write real Chinese: a result that is still English would be
+        // picked up again by the observer and could loop forever
+        // ("Meh" -> "\"Meh\"" -> "\"\"Meh\"\"" …).
+        if (zh && zh !== t && hasChinese(zh)) node.nodeValue = raw.replace(t, resolveKw(zh))
+      }
+    }
+
     const translateWithin = (root: ParentNode) => {
       root.querySelectorAll<HTMLElement>(".item-property").forEach(translateProperty)
       root.querySelectorAll<HTMLElement>(".item-mod").forEach(translateMod)
+      root.querySelectorAll<HTMLElement>(".item-mod").forEach(translateAffixNames)
+      root.querySelectorAll<HTMLElement>(LEFTOVER_BOX).forEach(translateLeftovers)
       root.querySelectorAll<HTMLElement>(NOTABLE_SPAN).forEach(translateNotable)
     }
 
@@ -309,6 +370,15 @@ export default defineContentScript({
       }
     }
 
+    const applyStatText = (v: unknown) => {
+      if (v && typeof v === "object") {
+        statText = v as Record<string, string>
+        runFullPass()
+      }
+    }
+    const applyStatTplIdx = (v: unknown) => {
+      if (v && typeof v === "object") statTplIdx = v as Record<string, string>
+    }
     const applyStatTpl = (v: unknown) => {
       if (v && typeof v === "object") {
         statTpl = v as Record<string, string>
@@ -317,13 +387,17 @@ export default defineContentScript({
     }
 
     try {
-      chrome.storage.local.get([modmapKey, statTplKey], (data) => {
+      chrome.storage.local.get([modmapKey, statTplKey, statTplIdxKey, ...(statTextKey ? [statTextKey] : [])], (data) => {
         const d = data as Record<string, unknown>
+        applyStatTplIdx(d?.[statTplIdxKey])
+        if (statTextKey) applyStatText(d?.[statTextKey])
         applyStatTpl(d?.[statTplKey])
         applyMap(d?.[modmapKey])
       })
       chrome.storage.onChanged?.addListener((changes, area) => {
         if (area !== "local") return
+        if (changes[statTplIdxKey]) applyStatTplIdx(changes[statTplIdxKey].newValue)
+        if (statTextKey && changes[statTextKey]) applyStatText(changes[statTextKey].newValue)
         if (changes[statTplKey]) applyStatTpl(changes[statTplKey].newValue)
         if (changes[modmapKey]) applyMap(changes[modmapKey].newValue)
       })
@@ -344,13 +418,31 @@ export default defineContentScript({
         if (node.matches?.(".item-property")) translateProperty(node)
         if (node.matches?.(NOTABLE_SPAN)) translateNotable(node)
         translateWithin(node)
+        // The site often fills a card in pieces (text / spans added into an
+        // existing popup), so also re-check the card the node belongs to.
+        const mod = node.closest?.(".item-mod") as HTMLElement | null
+        if (mod) translateAffixNames(mod)
+        const box = node.closest?.(LEFTOVER_BOX) as HTMLElement | null
+        if (box) translateLeftovers(box)
       }
+      // Everything recorded during this flush is our own writing (the site's
+      // changes were already delivered before the frame). Drop it so a
+      // translation can never feed itself back in a loop.
+      observer.takeRecords()
     }
 
     const observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
+        // Vue reuses result rows and rewrites their text in place (a
+        // characterData change, no new nodes) — re-check those too.
+        if (mutation.type === "characterData") {
+          const p = mutation.target.parentElement
+          if (p && !hasChinese(mutation.target.nodeValue || "")) queued.push(p)
+          continue
+        }
         mutation.addedNodes.forEach((node) => {
           if (node.nodeType === Node.ELEMENT_NODE) queued.push(node as HTMLElement)
+          else if (node.nodeType === Node.TEXT_NODE && node.parentElement) queued.push(node.parentElement)
         })
       }
       if (!scheduled && queued.length > 0) {
@@ -360,7 +452,7 @@ export default defineContentScript({
     })
 
     if (document.body) {
-      observer.observe(document.body, { childList: true, subtree: true })
+      observer.observe(document.body, { childList: true, subtree: true, characterData: true })
     }
 
     ;[400, 1200, 2500].forEach((delay) => setTimeout(runFullPass, delay))

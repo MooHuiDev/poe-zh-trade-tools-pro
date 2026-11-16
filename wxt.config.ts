@@ -49,8 +49,8 @@ export default defineConfig({
   },
   manifest: (env) => ({
     name: "Poe Zh Trade Tools Pro",
-    version: "4.1.10",
-    version_name: "4.1.10",
+    version: "4.1.11",
+    version_name: "4.1.11",
     ...(env.browser === "chrome" && includeChromeKey
       ? { key: CHROME_MANIFEST_KEY }
       : {}),

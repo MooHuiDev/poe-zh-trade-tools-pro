@@ -1,4 +1,5 @@
 import { tradeHosts } from "~/lib/config/trade-hosts"
+import { augmentFilteredOptions } from "~/lib/poe-zh-core/filter-search-augment"
 
 /**
  * Chinese display + search for the trade site's "knownItem" filter dropdowns
@@ -188,36 +189,15 @@ export default defineContentScript({
       vm: any,
       getLabel: (o: unknown) => unknown,
       native: unknown
-    ): unknown => {
-      if (!Array.isArray(native)) return native
-      // Only the flat knownItem lists. GROUPED multiselects (the stat filter:
-      // options are groups with `entries`, rendered via group-values) must never
-      // get raw options appended — a group object in the flat list breaks the
-      // render and the whole filter box disappears. Their options are already
-      // bilingual, so Chinese typing works natively there.
-      const p = vm?.$props || vm?.$?.props || vm || {}
-      if (p.groupValues || p.groupLabel) return native
-      const q = String(vm?.search || "")
-        .replace(/^~+/, "")
-        .trim()
-      if (q.length < 2 || !hasZh(q)) return native
-      try {
-        const seen = new Set(native)
-        const add: unknown[] = []
-        const opts = Array.isArray(vm.options) ? vm.options : []
-        for (const o of opts) {
-          if (seen.has(o) || !o || typeof o !== "object" || "entries" in o) continue
-          const lab = translateLabel(getLabel(o))
-          if (typeof lab === "string" && lab.includes(q)) {
-            add.push(o)
-            if (add.length >= 50) break
-          }
-        }
-        return add.length ? [...native, ...add] : native
-      } catch {
-        return native // never let our augmentation break the site's render
-      }
-    }
+    ): unknown =>
+      augmentFilteredOptions({
+        native,
+        options: vm?.options,
+        search: vm?.search,
+        props: vm?.$props || vm?.$?.props || vm,
+        getLabel,
+        translateLabel
+      })
 
     const patchFiltered = (vm: any): boolean => {
       if (!vm) return false

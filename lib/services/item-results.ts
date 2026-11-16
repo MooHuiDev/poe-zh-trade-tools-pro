@@ -20,6 +20,8 @@ import {
   hasUnsupportedCraftOfExileMod
 } from "../utilities/copy-item-for-craft-of-exile";
 import { flashMessages } from "./flash";
+import { get } from "svelte/store";
+import { languageStore, translate } from "./i18n";
 import { experimentalSettings } from "./experimental";
 
 
@@ -641,7 +643,7 @@ export class ItemResultsService {
     }
 
     el.replaceChildren();
-    el.appendChild(this.createTextSpan("bt-equivalent-label", "equivalent:"));
+    el.appendChild(this.createTextSpan("bt-equivalent-label", translate(get(languageStore), "results.equivalentLabel")));
 
     parts.forEach((part, index) => {
       if (index > 0) {

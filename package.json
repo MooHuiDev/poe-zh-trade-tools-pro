@@ -16,6 +16,8 @@
     "whats-new": "node scripts/generate-whats-new.cjs",
     "test:bookmark-exports": "node --no-warnings --experimental-strip-types --test tests/bookmark-export-compatibility.test.mjs",
     "typecheck": "tsc --noEmit",
+    "update-data": "node scripts/update-game-data.mjs",
+    "test": "node --no-warnings --experimental-strip-types --test \"tests/*.test.mjs\"",
     "build:chrome": "node scripts/wxt-runner.cjs build",
     "build:firefox": "node scripts/wxt-runner.cjs build -b firefox",
     "build": "pnpm run build:chrome",
@@ -38,6 +40,8 @@
     "@types/chrome": "0.2.2",
     "@types/node": "26.1.1",
     "@wxt-dev/module-svelte": "^2.0.5",
+    "ooz-wasm": "^2.0.0",
+    "pathofexile-dat": "16.0.1",
     "prettier": "3.9.5",
     "typescript": "^7.0.2",
     "wxt": "^0.20.27"

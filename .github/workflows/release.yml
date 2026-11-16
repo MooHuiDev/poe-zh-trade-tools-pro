@@ -29,6 +29,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
+      # Unit tests (name pairing, mod/property translation, dropdown search,
+      # bookmarks). A failing test stops the release before anything is built.
+      - name: Test
+        run: pnpm test
+
       - name: Build (Chrome)
         run: pnpm run build:chrome
 

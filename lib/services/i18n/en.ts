@@ -234,6 +234,7 @@ export const englishTranslations: Record<string, TranslationValue> = {
     "Open the quick onboarding again to review the main actions and tabs.",
   "settings.reopenTutorial": "Open Tutorial",
   "settings.resultsTitle": "Results Tools",
+  "results.equivalentLabel": "equivalent:",
   "settings.equivalentTitle": "Equivalent Pricing",
   "settings.equivalentDescription":
     "Show or hide the extra chaos/divine equivalent line in trade results.",

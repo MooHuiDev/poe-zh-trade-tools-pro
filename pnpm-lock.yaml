@@ -30,6 +30,12 @@ importers:
       '@wxt-dev/module-svelte':
         specifier: ^2.0.5
         version: 2.0.5(svelte@5.56.5)(vite@8.1.4(@types/node@26.1.1)(esbuild@0.27.7)(jiti@2.7.0))(wxt@0.20.27(@types/node@26.1.1)(jiti@2.7.0)(rolldown@1.1.5))
+      ooz-wasm:
+        specifier: ^2.0.0
+        version: 2.0.0
+      pathofexile-dat:
+        specifier: 16.0.1
+        version: 16.0.1
       prettier:
         specifier: 3.9.5
         version: 3.9.5
@@ -1468,6 +1474,9 @@ packages:
     resolution: {integrity: sha512-VXJjc87FScF88uafS3JllDgvAm+c/Slfz06lorj2uAY34rlUu0Nt+v8wreiImcrgAjjIHp1rXpTDlLOGw29WwQ==}
     engines: {node: '>=18'}
 
+  ooz-wasm@2.0.0:
+    resolution: {integrity: sha512-Ewk+Vga2m9niFGV5qT+4EKfBnFEQSQfnTdOWSlnQcpDB2OAdk7TpRHfKqxLSLhDKRjKjw9R+sGlOreWW8ABR0A==}
+
   open@11.0.0:
     resolution: {integrity: sha512-smsWv2LzFjP03xmvFoJ331ss6h+jixfA4UUV/Bsiyuu4YJPfN+FIQGOIiv4w9/+MoHkfkJ22UIaQWRVFRfH6Vw==}
     engines: {node: '>=20'}
@@ -1496,6 +1505,14 @@ packages:
 
   pathe@2.0.3:
     resolution: {integrity: sha512-WUjGcAqP1gQacoQe+OBJsFA7Ld4DyXuUIjZ5cc75cLHvJ7dtNsTugphxIADwspS+AraAUePCKrSVtPLFj/F88w==}
+
+  pathofexile-dat-schema@8.0.0:
+    resolution: {integrity: sha512-sn/8cJHbDCM6HjLMk9LnWXXS5Nbl2YqzqZslbooC7ankKbnr0tBwfl8AxM5fI+IzX49zNnKGuqpFvQQ2UMFuig==}
+
+  pathofexile-dat@16.0.1:
+    resolution: {integrity: sha512-9se/1xrt0YAOsCwUZWjBRu5vIDmk3+JbZCVDvmJCXH+/mr/rJpSfj3YtK5brN/HipUH/vPwg3gDpmH/3QDD4Qw==}
+    engines: {node: '>=22.0.0'}
+    hasBin: true
 
   perfect-debounce@2.1.0:
     resolution: {integrity: sha512-LjgdTytVFXeUgtHZr9WYViYSM/g8MkcTPYDlPa3cDqMirHjKiSZPYd6DoL7pK8AJQr+uWkQvCjHNdiMqsrJs+g==}
@@ -3165,6 +3182,8 @@ snapshots:
     dependencies:
       mimic-function: 5.0.1
 
+  ooz-wasm@2.0.0: {}
+
   open@11.0.0:
     dependencies:
       default-browser: 5.5.0
@@ -3202,6 +3221,13 @@ snapshots:
       type-fest: 3.13.1
 
   pathe@2.0.3: {}
+
+  pathofexile-dat-schema@8.0.0: {}
+
+  pathofexile-dat@16.0.1:
+    dependencies:
+      ooz-wasm: 2.0.0
+      pathofexile-dat-schema: 8.0.0
 
   perfect-debounce@2.1.0: {}
 

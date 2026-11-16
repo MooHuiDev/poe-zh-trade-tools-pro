@@ -208,6 +208,7 @@ export const simplifiedChineseTranslations: Record<string, TranslationValue> = {
     "重新打开快速导览以复习主要的操作与分页。",
   "settings.reopenTutorial": "打开教学",
   "settings.resultsTitle": "结果工具",
+  "results.equivalentLabel": "等值：",
   "settings.equivalentTitle": "等值定价",
   "settings.equivalentDescription":
     "显示或隐藏交易结果中额外的混沌石／神圣石等值那一行。",

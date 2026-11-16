@@ -103,6 +103,36 @@ for (const id of ids) {
   out[key] = z.replace(PH, (_, n) => `{${order.indexOf(n)}}`)
 }
 
+// Labels shown as property lines that live in other tables (English → 繁中 by
+// row, same column): heist contract jobs ("Lockpicking"), objective value tiers
+// ("Moderate Value", "Priceless"), corpse monster categories ("Humanoid").
+// Only fills gaps — ClientStrings wins.
+const pairColumn = (file, offset) => {
+  const E = readDatFile(file, readGameFile(file))
+  const zf = file.replace('data/', 'data/traditional chinese/')
+  const Z = readDatFile(zf, readGameFile(zf))
+  const e = readColumn({ offset, type: { string: {} } }, E)
+  const z = readColumn({ offset, type: { string: {} } }, Z)
+  return e.map((en, i) => [en, z[i]])
+}
+let extraLabels = 0
+for (const [file, offset] of [
+  ['data/heistjobs.datc64', 8],
+  ['data/heistobjectivevaluedescriptions.datc64', 8],
+  ['data/monstercategories.datc64', 16],
+  // itemised beasts: 種類 / 屬類 / 科類 values ("Goliaths", "Unnaturals", "The Wilds")
+  ['data/bestiarygenus.datc64', 8],
+  ['data/bestiarygroups.datc64', 24],
+  ['data/bestiaryfamilies.datc64', 8]
+]) {
+  for (const [en, zh] of pairColumn(file, offset)) {
+    if (!en || !zh || en === zh || !/[一-鿿]/.test(zh) || /[{}<\n]/.test(en)) continue
+    const key = en.replace(/\s+/g, ' ').trim()
+    if (!(key in out)) { out[key] = zh; extraLabels++ }
+  }
+}
+console.log('extra labels from heist / monster tables:', extraLabels)
+
 // Skill-gem tags ("Attack, AoE, Melee") — GemTags table, column 1 = display text.
 const tags = (p) => {
   const dat = readDatFile(p, readGameFile(p))
