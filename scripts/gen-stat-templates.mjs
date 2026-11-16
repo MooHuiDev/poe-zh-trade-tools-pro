@@ -312,7 +312,7 @@ const genText = {}
         // Chinese label with a colon the English doesn't have ("Build" ->
         // "流派：") would double up with the site's own ": ".
         if (!/[:：]\s*$/.test(l)) v = v.replace(/\s*[:：]\s*$/, '')
-        if (!v) return
+        if (!v || !/[一-鿿]/.test(v)) return // quotes / names left in English
         ;(seen[key] ??= {})[v] = (seen[key][v] || 0) + 1; pairs++
       })
     })
