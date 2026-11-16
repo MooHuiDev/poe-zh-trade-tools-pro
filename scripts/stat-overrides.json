@@ -2527,7 +2527,9 @@
   "#chancetoblockattackdamageifthereareatleast#enemieswithin#metres": "若 6 公尺內至少有 5 名敵人，#% 攻擊傷害格擋率",
   "gain#barkeachsecondifyouhaventbeenhitbyanenemyattackrecently": "若你近期沒有被敵人攻擊擊中，每秒獲得 # 層木質",
   "everysecondtimeyoucasteachspellgainmanaequaltoitsupfrontcost": "你每第二次施放各個法術時，獲得等同於其前期消耗的魔力",
-  "decoydevouringandrejuvenationtotemsreflect#oftheirmaximumlifeasfiredamagetoenemieswithinabaseradiusof#metreswhenhit": "誘餌圖騰、吞噬圖騰和回春圖騰被擊中時，反射 #% 它們最大生命的火焰傷害至 1.8 公尺內的敵人"
+  "decoydevouringandrejuvenationtotemsreflect#oftheirmaximumlifeasfiredamagetoenemieswithinabaseradiusof#metreswhenhit": "誘餌圖騰、吞噬圖騰和回春圖騰被擊中時，反射 #% 它們最大生命的火焰傷害至 1.8 公尺內的敵人",
+  "nearbyallieshave#increasedimpaleeffect": "附近友方增加 #% 穿刺效果",
+  "nearbyallieshave#reducedimpaleeffect": "附近友方減少 #% 穿刺效果"
  },
  "cn": {
   "#ofdamagefromhitsistakenfromthebuffbeforeyourlifeorenergyshield": "#% 的击中伤害在作用于你的生命或能量护盾前由增益效果受到",
@@ -5144,7 +5146,9 @@
   "socketedspellsaresupportedbylevel#windburst": "插上的法术被 # 级的风爆术辅助",
   "socketedspellsaresupportedbylevel#witheringtouch": "插上的法术被 # 级的凋零之触辅助",
   "theattacktimeofyourmainhandweapon": "你主手武器的攻击时间",
-  "socketedgemsdeal#moredamagepersocketedskillgem": "每个镶嵌的技能宝石使镶嵌的宝石伤害总增 #%"
+  "socketedgemsdeal#moredamagepersocketedskillgem": "每个镶嵌的技能宝石使镶嵌的宝石伤害总增 #%",
+  "nearbyallieshave#increasedimpaleeffect": "周围友军的穿刺效果提高 #%",
+  "nearbyallieshave#reducedimpaleeffect": "周围友军的穿刺效果降低 #%"
  },
  "remove": {
   "tw": [
@@ -5242,10 +5246,14 @@
  },
  "manualOnly": {
   "tw": [
-   "socketedgemsdeal#moredamagepersocketedskillgem"
+   "socketedgemsdeal#moredamagepersocketedskillgem",
+   "nearbyallieshave#increasedimpaleeffect",
+   "nearbyallieshave#reducedimpaleeffect"
   ],
   "cn": [
-   "socketedgemsdeal#moredamagepersocketedskillgem"
+   "socketedgemsdeal#moredamagepersocketedskillgem",
+   "nearbyallieshave#increasedimpaleeffect",
+   "nearbyallieshave#reducedimpaleeffect"
   ]
  },
  "officialErrors": {
@@ -5291,6 +5299,8 @@
   "smallintelligence": "小型智慧",
   "cangrowintoamysteriousitemonthegenesistree": "可在創始之樹上成長為一件神秘物品",
   "animatedweaponsaretransformedintorandomunique": "幻化武器轉化為隨機傳奇武器",
-  "weaponswithlevelrequirementbetween#and#": "（物品需求等級 # 至 #）"
+  "weaponswithlevelrequirementbetween#and#": "（物品需求等級 # 至 #）",
+  "socketedfossil": "個插槽化石",
+  "socketedfossils": "個插槽化石"
  }
 }
