@@ -287,12 +287,24 @@ const genText = {}
     en.forEach((e, i) => {
       const z = zh[i]
       if (!e || !z || e === z || !/[\u4e00-\u9fff]/.test(z) || !/[A-Za-z]{2}/.test(e)) return
-      if (/^Metadata|[\\/_]|\[\w+\]/.test(e)) return // ids, paths, keyword markup
-      const el = stripMarkup(e).split(/\r?\n/), zl = stripMarkup(z).split(/\r?\n/)
-      if (el.length !== zl.length) return
-      el.forEach((line, j) => {
-        const l = line.trim(), zline = zl[j].trim()
-        if (!l || !zline || l.length > 200 || !/[A-Za-z]{2}/.test(l) || /[<>{}]/.test(zline)) return
+      if (/^Metadata|[\\/_]/.test(e)) return // ids, paths
+      // Flavour text is wrapped as "<size:27>{…}"; [Keyword|Text] markup is
+      // resolved by stripMarkup (the site shows the plain text).
+      const unwrap = (s) => stripMarkup(s.replace(/<[a-z_]+:\d+>\s*\{([^{}]*)\}/gi, '$1'))
+      const el = unwrap(e).split(/\r?\n/), zl = unwrap(z).split(/\r?\n/)
+      // Multi-line text (card flavour) is shown in ONE text node: also key the
+      // whole text, so lines that break differently in Chinese still match.
+      const whole = [[el.map((s) => s.trim()).join(' '), zl.map((s) => s.trim()).filter(Boolean).join(el.length > 1 ? '\n' : '')]]
+      const pairsOf = el.length === zl.length
+        ? [...el.map((l, j) => [l, zl[j]]), ...(el.length > 1 ? whole : [])]
+        : whole
+      pairsOf.forEach(([line, zl2]) => {
+        const l = line.trim(), zline = zl2.trim()
+        // {0} placeholders are fine (mapLine turns them into #); long skill
+        // descriptions are fine too — only markup is rejected.
+        if (!l || !zline || l.length > 1000 || !/[A-Za-z]{2}/.test(l)) return
+        const noPh = (s) => s.replace(/\{\d+(?::[^{}]*)?\}/g, '')
+        if (/[<>{}\[\]|]/.test(noPh(zline)) || /[\[\]|]/.test(l)) return
         const key = normEn(l.replace(PLACEHOLDER, '#'))
         if (!key || key.length < 3 || key === '#') return
         let v = mapLine(l, zline)
@@ -354,7 +366,9 @@ for (const L of ['tw', 'cn']) {
   // (skip keys with "##": two adjacent placeholders are names, not numbers)
   for (const [k, v] of Object.entries(genIdx[L])) if (!(k in base) && !k.includes('##')) idx[k] = v
   result[L + 'Idx'] = idx
-  if (L === 'tw') result.twText = genText
+  // Hand-added texts (no game source, or the game splits a line differently
+  // than the site) — applied last, like the other overrides.
+  if (L === 'tw') result.twText = { ...genText, ...(overrides.twText || {}) }
   r.indexed = Object.keys(idx).length
   // Reminder: lines we translated by hand because the official text had no
   // Chinese (overrides.manualOnly). Once the game ships an official translation

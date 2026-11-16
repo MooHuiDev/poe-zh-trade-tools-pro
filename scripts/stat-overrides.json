@@ -5283,5 +5283,14 @@
    "triggerlevel#summonragingspiritonkill",
    "uniquemonstersinyourmapshave#reducedtoughnessper#mappacksize"
   ]
+ },
+ "twText": {
+  "replacesone": "取代一個",
+  "smalldexterity": "小型敏捷",
+  "smallstrength": "小型力量",
+  "smallintelligence": "小型智慧",
+  "cangrowintoamysteriousitemonthegenesistree": "可在創始之樹上成長為一件神秘物品",
+  "animatedweaponsaretransformedintorandomunique": "幻化武器轉化為隨機傳奇武器",
+  "weaponswithlevelrequirementbetween#and#": "（物品需求等級 # 至 #）"
  }
 }
