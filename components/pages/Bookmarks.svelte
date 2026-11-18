@@ -8,7 +8,7 @@
   import folderPlusIcon from "lucide-static/icons/folder-plus.svg?raw";
   import xIcon from "lucide-static/icons/x.svg?raw";
   import { languageStore, translate } from "../../lib/services/i18n";
-  import { bookmarksService } from "../../lib/services/bookmarks";
+  import { bookmarksService, resolveImportRealm } from "../../lib/services/bookmarks";
   import { tradeLocationService } from "../../lib/services/trade-location";
   import { getTradeRealm } from "../../lib/config/trade-hosts";
   import { flashMessages } from "../../lib/services/flash";
@@ -230,12 +230,37 @@
       }
 
       const { folder, trades, children } = tree;
-      const folderId = await bookmarksService.persistFolder(folder);
+      // Put the folder on the right server (see resolveImportRealm): older
+      // exports carry no server and used to land on "intl" even when imported
+      // on the Taiwan site.
+      // Leagues of all searches (parent + sub-folders) tell the server when the
+      // export doesn't say it (Taiwan leagues are Chinese, international English).
+      const leagues = [
+          ...trades.map((t) => t.location.league),
+          ...children.flatMap(([, childTrades]) => childTrades.map((t) => t.location.league))
+      ];
+      const realm = resolveImportRealm(folder.realm, currentRealm, leagues);
+      if (!realm) {
+          const zh = $languageStore === "zh-tw" || $languageStore === "zh-cn";
+          const names = $languageStore === "zh-cn"
+              ? { tw: "台服", intl: "国际服" }
+              : zh
+                  ? { tw: "台服", intl: "國際服" }
+                  : { tw: "Taiwan", intl: "international" };
+          flashMessages.alert(translate($languageStore, "bookmarks.importWrongRealm", {
+              // refused = the folder belongs to the OTHER server
+              server: names[currentRealm === "tw" ? "intl" : "tw"]
+          }));
+          return;
+      }
+      const folderId = await bookmarksService.persistFolder({ ...folder, realm });
       await bookmarksService.persistTrades(trades, folderId);
-      // Recreate bundled sub-folders under the imported parent (v6 exports).
+      // Recreate bundled sub-folders under the imported parent (v6 exports);
+      // they always live on the parent's server.
       for (const [childFolder, childTrades] of children) {
         const childId = await bookmarksService.persistFolder({
           ...childFolder,
+          realm,
           parentId: folderId
         });
         await bookmarksService.persistTrades(childTrades, childId);

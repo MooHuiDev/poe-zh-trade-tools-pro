@@ -52,11 +52,15 @@ interface ExportedFolderStruct {
   icn: string
   tit: string
   ver?: TradeSiteVersion
+  // Server the folder belongs to (added 4.1.12). Older exports lack it.
+  rlm?: TradeRealm
   cats?: Array<{ id: string; tit: string }>
   trs: Array<{ tit: string; loc: string; cat?: string }>
   // v6: sub-folders bundled with the parent (one level; each with its own trades).
   subs?: ExportedFolderStruct[]
 }
+
+export { resolveImportRealm } from "./bookmark-realm"
 
 export class BookmarksService {
   private foldersStore = writable<BookmarksFolderStruct[]>([])
@@ -696,6 +700,11 @@ export class BookmarksService {
       icn: folder.icon as string,
       tit: folder.title,
       ver: folder.version,
+      // Only when the folder really has a server. Folders without one (made
+      // before realms, or wrongly imported before this fix) export without it,
+      // so they can be imported on whichever server the user chooses — that is
+      // also how a Taiwan folder that landed on "intl" can be moved back.
+      rlm: folder.realm,
       cats: (folder.categories || []).map((category) => ({
         id: category.id,
         tit: category.title
@@ -750,6 +759,9 @@ export class BookmarksService {
 
     if (exportVersion >= 3 && payload.ver) {
       folder.version = payload.ver
+    }
+    if (payload.rlm === "tw" || payload.rlm === "intl") {
+      folder.realm = payload.rlm
     }
 
     if (exportVersion >= 5 && Array.isArray(payload.cats)) {

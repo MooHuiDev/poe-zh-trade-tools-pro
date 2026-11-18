@@ -325,6 +325,8 @@ export const simplifiedChineseTranslations: Record<string, TranslationValue> = {
   "bookmarks.restoreFailed": "还原备份失败。",
   "bookmarks.pasteFolderData": "请先粘贴文件夹数据。",
   "bookmarks.invalidFolderData": "文件夹数据无效，请检查字符串。",
+  "bookmarks.importWrongRealm": ({ server }) =>
+    `这个文件夹是从${server}市集导出的，请到${server}市集导入（两边的搜索网址不通用）。`,
   "bookmarks.importedFolder": ({ title }) => `已导入「${title}」！`,
   "bookmarks.toolbar.new": "添加",
   "bookmarks.toolbar.newFolderTitle": "添加文件夹",

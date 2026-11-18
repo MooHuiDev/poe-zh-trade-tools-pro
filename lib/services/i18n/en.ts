@@ -355,6 +355,8 @@ export const englishTranslations: Record<string, TranslationValue> = {
   "bookmarks.pasteFolderData": "Please paste the folder data first.",
   "bookmarks.invalidFolderData":
     "Invalid folder data. Please check the string.",
+  "bookmarks.importWrongRealm": ({ server }) =>
+    `This folder was exported from the ${server} trade site. Please import it there — its searches don't work on this site.`,
   "bookmarks.importedFolder": ({ title }) => `Imported "${title}"!`,
   "bookmarks.toolbar.new": "New",
   "bookmarks.toolbar.newFolderTitle": "New Folder",

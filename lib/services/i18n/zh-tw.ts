@@ -325,6 +325,8 @@ export const traditionalChineseTranslations: Record<string, TranslationValue> = 
   "bookmarks.restoreFailed": "還原備份失敗。",
   "bookmarks.pasteFolderData": "請先貼上資料夾資料。",
   "bookmarks.invalidFolderData": "資料夾資料無效，請檢查字串。",
+  "bookmarks.importWrongRealm": ({ server }) =>
+    `這個資料夾是從${server}市集匯出的，請到${server}市集匯入（兩邊的搜尋網址不通用）。`,
   "bookmarks.importedFolder": ({ title }) => `已匯入「${title}」！`,
   "bookmarks.toolbar.new": "新增",
   "bookmarks.toolbar.newFolderTitle": "新增資料夾",
