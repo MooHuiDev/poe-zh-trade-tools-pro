@@ -2495,7 +2495,6 @@
   "socketedspellsaresupportedbylevel#volley": "插槽中法術被等級 # 的齊射輔助",
   "socketedspellsaresupportedbylevel#windburst": "插槽中法術被等級 # 的風破輔助",
   "socketedspellsaresupportedbylevel#witheringtouch": "插槽中法術被等級 # 的凋零之觸輔助",
-  "socketedgemsdeal#moredamagepersocketedskillgem": "插槽中的寶石每有一個插槽中的技能寶石，造成 #% 更多傷害",
   "#reducedchargerecovery": "減少 #% 充能恢復",
   "#reducedeffect#tothisvaluewhenused": "減少 #% 效果。使用時 #% 此數值",
   "minionshave#lessmaximumlife": "召喚物有 #% 更少最大生命",
@@ -5246,7 +5245,6 @@
  },
  "manualOnly": {
   "tw": [
-   "socketedgemsdeal#moredamagepersocketedskillgem",
    "nearbyallieshave#increasedimpaleeffect",
    "nearbyallieshave#reducedimpaleeffect"
   ],

@@ -96,10 +96,10 @@ test("data: Putrid Seed keeps the hand fix (四個, official text says 一個)",
   )
 })
 
-test("data: Mantle of Dreams mod (no official Chinese) is translated", () => {
+test("data: Mantle of Dreams mod uses the official Chinese (added in 3.30.0c)", () => {
   assert.equal(
     tw("Socketed Gems deal 20% more damage per Socketed Skill Gem"),
-    "插槽中的寶石每有一個插槽中的技能寶石，造成 20% 更多傷害"
+    "每鑲嵌一顆技能寶石，插槽中的寶石即造成20%更多傷害"
   )
 })
 
