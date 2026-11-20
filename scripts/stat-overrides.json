@@ -5300,5 +5300,11 @@
   "weaponswithlevelrequirementbetween#and#": "（物品需求等級 # 至 #）",
   "socketedfossil": "個插槽化石",
   "socketedfossils": "個插槽化石"
+ },
+ "cnText": {
+  "replacesone": "替换一个",
+  "smalldexterity": "小型敏捷",
+  "smallstrength": "小型力量",
+  "smallintelligence": "小型智慧"
  }
 }
