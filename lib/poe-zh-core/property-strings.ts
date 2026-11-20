@@ -207,7 +207,7 @@ export const PROPERTY_STRINGS_TW: Record<string, string> = {
   "Minor Boons": "次要恩惠",
   "Mirrored": "已複製",
   "Moderate Value": "中等價值",
-  "Modifiable only with Chaos Orbs, Vaal Orbs, Delirium Orbs and Chisels": "僅能使用混沌石、瓦爾寶珠、譫妄玉和圖釘調整",
+  "Modifiable with [Tier17ValidCurrency|Limited Currency]": "僅能使用混沌石、瓦爾寶珠、譫妄玉和圖釘調整",
   "Monster": "怪物",
   "Monster Category": "怪物種類",
   "Monster Pack Size": "怪物群大小",
