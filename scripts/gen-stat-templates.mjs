@@ -22,6 +22,11 @@
  * USAGE
  *   node gen-stat-templates.mjs <Content.ggpk> <existing stat-templates.json> \
  *        <stat-overrides.json> <out stat-templates.json> [--version 3.30] [--update]
+ *        [--cn <國服 client Bundles2 folder>]
+ *
+ *   --cn: take ALL Simplified Chinese from the Tencent (国服) client instead —
+ *   its stat descriptions are newer than the Simplified block inside the Taiwan
+ *   client, and only it has Simplified data tables (→ cnText).
  *
  *   Merge policy (safe by default):
  *     1. Start from the EXISTING dictionary.
@@ -56,6 +61,8 @@ if (!ggpkPath || !existingPath || !overridesPath || !outPath) {
 const UPDATE = flags.includes('--update')
 const vIdx = flags.indexOf('--version')
 const VERSION = vIdx >= 0 ? flags[vIdx + 1] : null
+const cnIdx = flags.indexOf('--cn')
+const CN_DIR = cnIdx >= 0 ? flags[cnIdx + 1] : null
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a)
 
 // ---------------------------------------------------------------- GGPK (v3)
@@ -121,6 +128,9 @@ const readGameFile = (p) => {
 }
 
 import { parseCsd, stripMarkup, normEn, PLACEHOLDER, mapLine, mapLineIdx } from './lib/stat-line.mjs'
+import { openBundlesDir } from './lib/ggpk.mjs'
+// 国服 client (optional): source of every Simplified Chinese table.
+const cnSrc = CN_DIR ? openBundlesDir(CN_DIR) : null
 
 const LANG = { tw: 'Traditional Chinese', cn: 'Simplified Chinese' }
 const gen = { tw: {}, cn: {} }
@@ -129,12 +139,13 @@ const genIdx = { tw: {}, cn: {} }
 const combinedParts = { tw: {}, cn: {} }
 const stat = { descriptions: 0, lines: 0, emitted: { tw: 0, cn: 0 }, skippedNumbers: { tw: 0, cn: 0 }, skippedLines: { tw: 0, cn: 0 }, conflicts: { tw: 0, cn: 0 } }
 
-for (const file of csdFiles) {
-  const text = Buffer.from(readGameFile(file)).toString('utf16le')
+const parseCsdFiles = (files, readFile, langs) => {
+for (const file of files) {
+  const text = Buffer.from(readFile(file)).toString('utf16le')
   const descs = parseCsd(text)
-  stat.descriptions += descs.length
+  if (langs.tw) stat.descriptions += descs.length
   for (const d of descs) {
-    for (const [L, langName] of Object.entries(LANG)) {
+    for (const [L, langName] of Object.entries(langs)) {
       const zhVars = d.langs[langName]; if (!zhVars) continue
       const byCond = new Map(zhVars.filter(Boolean).map((v) => [v.cond, v]))
       d.en.forEach((ev, k) => {
@@ -187,15 +198,24 @@ for (const file of csdFiles) {
     }
   }
 }
+}
+if (cnSrc) {
+  // Traditional from the Taiwan client; Simplified from the 国服 client.
+  parseCsdFiles(csdFiles, readGameFile, { tw: LANG.tw })
+  const cnFiles = cnSrc.dir('metadata/statdescriptions').files.filter((f) => f.endsWith('.csd'))
+    .sort((a, b) => (a.endsWith('/stat_descriptions.csd') ? -1 : b.endsWith('/stat_descriptions.csd') ? 1 : a.localeCompare(b)))
+  parseCsdFiles(cnFiles, cnSrc.read, { cn: LANG.cn })
+  log('Simplified from the 国服 client:', cnFiles.length, 'stat description files')
+} else parseCsdFiles(csdFiles, readGameFile, LANG)
 // Mod names shown as whole lines on itemised beasts ("Fertile Presence" ->
 // 豐富光環). Mods table: Id @0, Domain @94 (3 = monster), Name @98. Only the
 // Bestiary* monster mods (other monster mods are affix names like "of Flames"
 // that never appear as a line), only names with one Chinese, never over a real
 // stat key.
-// Traditional only (no Simplified mod names in the game files).
-{
-  const read = (p) => readDatFile(p, readGameFile(p))
-  const E = read('data/mods.datc64'), Z = read('data/traditional chinese/mods.datc64')
+// Traditional from the Taiwan client; Simplified from the 国服 client (--cn).
+const addMonsterModNames = (readFile, folder, L) => {
+  const read = (p) => readDatFile(p, readFile(p))
+  const E = read('data/mods.datc64'), Z = read(`data/${folder}/mods.datc64`)
   const col = (dat, offset, type) => readColumn({ offset, type }, dat)
   const en = col(E, 98, { string: {} }), zh = col(Z, 98, { string: {} })
   const dom = col(E, 94, { integer: { unsigned: false, size: 4 } })
@@ -211,19 +231,21 @@ for (const file of csdFiles) {
   if (Object.keys(names).length >= 10) { // sanity: column layout still as expected
     for (const [e, z] of Object.entries(names)) {
       const key = normEn(e)
-      if (!key || key in gen.tw) continue
-      gen.tw[key] = z; added++
+      if (!key || key in gen[L]) continue
+      gen[L][key] = z; added++
     }
   } else log('⚠ mods.datc64 layout changed? monster mod names skipped')
-  log('monster mod names added:', added)
+  log(`monster mod names added (${L}):`, added)
 }
+addMonsterModNames(readGameFile, 'traditional chinese', 'tw')
+if (cnSrc) addMonsterModNames(cnSrc.read, 'simplified chinese', 'cn')
 // Archnemesis modifiers on itemised beasts: some show their name ("Hasted" ->
 // 急速), some their effect text ("Extra Fire Damage and Exposure" ->
 // 額外火焰傷害和曝曬). ArchnemesisMods: name @16, effect text @48. Same rules
 // as above; only plain English words/phrases.
-{
-  const read = (p) => readDatFile(p, readGameFile(p))
-  const E = read('data/archnemesismods.datc64'), Z = read('data/traditional chinese/archnemesismods.datc64')
+const addArchnemesisNames = (readFile, folder, L) => {
+  const read = (p) => readDatFile(p, readFile(p))
+  const E = read('data/archnemesismods.datc64'), Z = read(`data/${folder}/archnemesismods.datc64`)
   const en = [], zh = []
   for (const offset of [16, 48]) {
     en.push(...readColumn({ offset, type: { string: {} } }, E))
@@ -241,20 +263,22 @@ for (const file of csdFiles) {
   if (Object.keys(names).length >= 20) {
     for (const [e, z] of Object.entries(names)) {
       const key = normEn(e)
-      if (!key || key in gen.tw) continue
-      gen.tw[key] = z; added++
+      if (!key || key in gen[L]) continue
+      gen[L][key] = z; added++
     }
   } else log('⚠ archnemesismods.datc64 layout changed? skipped')
-  log('archnemesis names / effect texts added:', added)
+  log(`archnemesis names / effect texts added (${L}):`, added)
 }
+addArchnemesisNames(readGameFile, 'traditional chinese', 'tw')
+if (cnSrc) addArchnemesisNames(cnSrc.read, 'simplified chinese', 'cn')
 // Other game texts that show up on trade result cards outside the mod lines:
 // affix names (Heavy / of Renown), gem descriptions, currency descriptions,
 // corpse implicits, flavour text, NPC / area / faction names, interface
 // labels … (English -> 繁中 by row, same column). Kept in a SEPARATE map
 // `twText` — the results page uses it for text that isn't a mod line; older
 // extension versions never read it. Traditional only (no Simplified tables).
-const genText = {}
-{
+const buildText = (readFile, folder, label) => {
+  const genText = {}
   const SOURCES = [
     ['data/mods.datc64', 98],            // affix / mod names
     ['data/itemisedcorpse.datc64', 32],  // corpse implicits
@@ -273,7 +297,7 @@ const genText = {}
     ['data/clientstrings.datc64', 8],    // interface labels
     ['data/clientstrings2.datc64', 8]
   ]
-  const read = (p) => readDatFile(p, readGameFile(p))
+  const read = (p) => readDatFile(p, readFile(p))
   // key -> { zh -> count }: when the same English has different Chinese in
   // different tables, keep the most common one (a few tables reword slightly).
   const seen = {}
@@ -282,7 +306,7 @@ const genText = {}
     let en, zh
     try {
       en = readColumn({ offset, type: { string: {} } }, read(file))
-      zh = readColumn({ offset, type: { string: {} } }, read(file.replace('data/', 'data/traditional chinese/')))
+      zh = readColumn({ offset, type: { string: {} } }, read(file.replace('data/', `data/${folder}/`)))
     } catch (e) { log('⚠ text source skipped:', file, e.message); continue }
     en.forEach((e, i) => {
       const z = zh[i]
@@ -323,7 +347,28 @@ const genText = {}
     if (best.length > 1) multi++
     genText[k] = best[0][0]
   }
-  log('other game texts:', Object.keys(genText).length, '(with several translations, most common kept:', multi + ')')
+  log(`other game texts (${label}):`, Object.keys(genText).length, '(with several translations, most common kept:', multi + ')')
+  return genText
+}
+const genText = buildText(readGameFile, 'traditional chinese', 'tw')
+// Simplified twin (cnText) — only with the 国服 client (--cn).
+const genTextCn = cnSrc ? buildText(cnSrc.read, 'simplified chinese', 'cn') : null
+// cnName: official 国服 names of every base item (bases, currency, fragments,
+// divination cards, gems …) keyed like the extension's item names
+// (lowercase a-z0-9). Replaces the 繁->简 conversion of 台服 names in 简中 mode.
+let genNameCn = null
+if (cnSrc) {
+  const en = cnSrc.column('data/baseitemtypes.datc64', 32), zh = cnSrc.column('data/simplified chinese/baseitemtypes.datc64', 32)
+  const seen = {}
+  en.forEach((e, i) => {
+    const z = (zh[i] || '').trim()
+    if (!e || !z || e === z || !/[\u4e00-\u9fff]/.test(z) || /^\[|^Unused|DNT/.test(e)) return
+    const k = e.toLowerCase().replace(/[^a-z0-9]/g, ''); if (!k) return
+    ;(seen[k] ??= new Set()).add(z)
+  })
+  genNameCn = {}
+  for (const [k, set] of Object.entries(seen)) if (set.size === 1) genNameCn[k] = [...set][0]
+  log('国服 base names:', Object.keys(genNameCn).length)
 }
 
 log('parsed descriptions:', stat.descriptions, '| english lines:', stat.lines)
@@ -369,6 +414,10 @@ for (const L of ['tw', 'cn']) {
   // Hand-added texts (no game source, or the game splits a line differently
   // than the site) — applied last, like the other overrides.
   if (L === 'tw') result.twText = { ...genText, ...(overrides.twText || {}) }
+  // cnText: same thing in Simplified (国服 client). Without --cn the existing one
+  // is kept as-is, so a run without the 国服 client never drops it.
+  if (L === 'cn' && genTextCn) result.cnText = { ...genTextCn, ...(overrides.cnText || {}) }
+  if (L === 'cn' && genNameCn) result.cnName = genNameCn
   r.indexed = Object.keys(idx).length
   // Reminder: lines we translated by hand because the official text had no
   // Chinese (overrides.manualOnly). Once the game ships an official translation

@@ -179,3 +179,31 @@ test("data twText: long skill descriptions, placeholders, card flavour, hand-add
   assert.equal(line("Replaces one"), "取代一個")
   assert.equal(line("Small Dexterity"), "小型敏捷")
 })
+
+// ---- Simplified from the 国服 client (generated with --cn) -------------------
+import { PROPERTY_STRINGS_CN, GEM_TAGS_CN } from "../lib/poe-zh-core/property-strings-cn.ts"
+
+test("data cn: mod lines use the 国服 client's wording", () => {
+  // 国服 says 冻结 (the Taiwan client's Simplified block still said 冰冻)
+  assert.equal(data.cn.cannotbefrozen, "无法被冻结")
+  assert.equal(fillTemplate(data.cn, data.cnIdx || {}, "+30% to Cold Resistance"), "+30% 冰霜抗性")
+})
+
+test("data cnText: other game texts in Simplified", () => {
+  const line = (s) => translateLine(data.cn, data.cnIdx, data.cnText, s)
+  assert.equal(line("Supports attack skills."), "辅助攻击技能。")
+  assert.equal(line("Heavy"), "重量的")
+  for (const [k, v] of Object.entries(data.cnText)) assert.ok(!/[{}<>\[\]|]/.test(v) && /[一-鿿]/.test(v), `${k}: ${v}`)
+})
+
+test("data cnName: official 国服 base / currency names", () => {
+  assert.equal(data.cnName.coralring, "珊瑚戒指")
+  assert.equal(data.cnName.orbofalteration, "改造石")
+  assert.equal(data.cnName.originatorsexaltedorb, "起源者的崇高石")
+})
+
+test("property-strings-cn: 国服 property labels and gem tags", () => {
+  assert.equal(PROPERTY_STRINGS_CN["Attacks per Second"], "每秒攻击次数")
+  assert.equal(PROPERTY_STRINGS_CN["Physical Damage"], "物理伤害")
+  assert.ok(Object.keys(GEM_TAGS_CN).length > 30)
+})

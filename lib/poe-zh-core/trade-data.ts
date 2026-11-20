@@ -190,6 +190,70 @@ const buildModMap = (twStats: StatGroup[], usStats: StatGroup[] | null) => {
   return map
 }
 
+// Simplified Stat Filter: buildStats prefers the Taiwan API text, which for 简中
+// is only a 繁->简 conversion of 台服 wording (e.g. 冰冷抗性, while 国服 says
+// 冰霜抗性). When the game-file dictionary (国服 client) has EVERY line of a
+// stat, use that official 国服 text instead. Runs AFTER convertDeep, so the
+// official text is never re-converted. Ids / options / types are untouched.
+const preferOfficialCn = (
+  stats: StatGroup[],
+  usStats: StatGroup[] | null,
+  tpl?: StatTpl
+): StatGroup[] => {
+  if (!usStats || !tpl) return stats
+  const usTextById: Record<string, string> = {}
+  for (const group of usStats)
+    for (const entry of group.entries ?? [])
+      if (entry.id && entry.text) usTextById[entry.id] = entry.text
+  return stats.map((group) => ({
+    ...group,
+    entries: (group.entries ?? []).map((entry) => {
+      const en = entry.id ? usTextById[entry.id] : undefined
+      // Pseudo stats keep their own wording (官方 omits "total" there).
+      if (!en || entry.type === "pseudo") return entry
+      const lines = en.split("\n")
+      const zh = lines.map((line) => tpl[normEnKey(line)])
+      if (!zh.every((z, i) => z && z !== lines[i])) return entry
+      // Templates carry the sign in the number ("+30" fills "#"), so a filter
+      // line would lose the "+" the English shows ("+#% to …" -> "#% …").
+      const withSign = (line: string, z: string) => {
+        const need = (line.match(/\+#/g) || []).length - (z.match(/\+#/g) || []).length
+        let left = need
+        return left > 0 ? z.replace(/(^|[^+\-#])#/g, (m, pre) => (left-- > 0 ? `${pre}+#` : m)) : z
+      }
+      return {
+        ...entry,
+        text: lines
+          .map((line, i) => `${resolveKw(withSign(line, zh[i] as string))} (${line})`)
+          .join("\n")
+      }
+    })
+  }))
+}
+
+// Simplified static data (currency, fragments, cards …): replace the 繁->简
+// text with the official 国服 name when one exists for the item's English name
+// (international static, same id). Ids / images are untouched.
+const preferOfficialCnStatic = (
+  cnStatic: StatGroup[],
+  usStatic: StatGroup[],
+  cnName: Record<string, string>
+): StatGroup[] => {
+  const enById: Record<string, string> = {}
+  for (const group of usStatic)
+    for (const entry of group.entries ?? [])
+      if (entry.id && entry.text) enById[entry.id] = entry.text
+  const key = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "")
+  return cnStatic.map((group) => ({
+    ...group,
+    entries: (group.entries ?? []).map((entry) => {
+      const en = entry.id ? enById[entry.id] : undefined
+      const zh = en ? cnName[key(en)] : undefined
+      return zh ? { ...entry, text: zh } : entry
+    })
+  }))
+}
+
 // Build the stats result: "中文 (English)" text for bilingual search, and the
 // category badge (entry.type) switched to the group's Chinese label.
 //
@@ -378,8 +442,10 @@ export const refreshTradeData = async (force = false): Promise<void> => {
         out.zhCore_stats = buildStats(twStats, usStats, statTpl?.tw)
         // Simplified: build with the authentic 国服 templates, then run the
         // 台服->国服 term conversion over the whole structure.
-        out.zhCore_cn_stats = convertDeep(
-          buildStats(twStats, usStats, statTpl?.cn)
+        out.zhCore_cn_stats = preferOfficialCn(
+          convertDeep(buildStats(twStats, usStats, statTpl?.cn)),
+          usStats,
+          statTpl?.cn
         )
         // Override 傭兵 skill names with authentic 国服 names (matched by English),
         // covering every renamed skill automatically without a manual list.
@@ -423,7 +489,25 @@ export const refreshTradeData = async (force = false): Promise<void> => {
     // content scripts only need to pick the "cn" storage key by language.
     try {
       // zhCore_cn_stats is built directly above (with authentic 国服 templates).
-      if (out.zhCore_static) out.zhCore_cn_static = convertDeep(out.zhCore_static)
+      if (out.zhCore_static) {
+        out.zhCore_cn_static = convertDeep(out.zhCore_static)
+        // Official 国服 names (cnName) for currency / fragments / cards …,
+        // matched through the international English text of the same id.
+        const cnName = (await loadRemoteStatTemplates())?.cnName
+        if (cnName) {
+          try {
+            const usStatic = (await fetchResult(`${US_API}static`)) as StatGroup[] | null
+            if (usStatic)
+              out.zhCore_cn_static = preferOfficialCnStatic(
+                out.zhCore_cn_static as StatGroup[],
+                usStatic,
+                cnName
+              )
+          } catch {
+            // keep the converted names
+          }
+        }
+      }
       if (out.zhCore_filters) out.zhCore_cn_filters = convertDeep(out.zhCore_filters)
       if (out.zhCore_modmap) out.zhCore_cn_modmap = convertDeep(out.zhCore_modmap)
       if (out.zhCore_ui) out.zhCore_cn_ui = convertDeep(out.zhCore_ui)

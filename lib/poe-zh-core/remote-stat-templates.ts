@@ -18,6 +18,9 @@ export type RemoteStatTemplates = {
   twIdx?: Record<string, string>
   cnIdx?: Record<string, string>
   twText?: Record<string, string>
+  cnText?: Record<string, string>
+  /** Official 国服 base-item names, keyed lowercase a-z0-9 English. */
+  cnName?: Record<string, string>
 }
 
 /** How long a finished download is reused before the next call fetches again. */

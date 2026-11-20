@@ -4,6 +4,10 @@
  * and write a report. Read-only on the game clients.
  *
  *   pnpm run update-data -- --tw "D:\GGG\Content.ggpk" [--global "D:\PoE_Global\Content.ggpk"]
+ *                           [--cn "D:\Poe_CN\流放之路(511)\Bundles2"]
+ *   --cn: the Tencent 国服 client's Bundles2 folder (no Content.ggpk). All
+ *         Simplified Chinese (cn, cnIdx, cnText, cn property lines, cn base
+ *         names) then comes from it.
  *                           [--version 3.30.0b] [--write]
  *
  * Without --write it's a dry run: everything is generated into a temp folder
@@ -32,6 +36,7 @@ const P = {
   stat: path.join(ROOT, 'data/stat-templates.json'),
   overrides: path.join(ROOT, 'scripts/stat-overrides.json'),
   props: path.join(ROOT, 'lib/poe-zh-core/property-strings.ts'),
+  propsCn: path.join(ROOT, 'lib/poe-zh-core/property-strings-cn.ts'),
   names: path.join(ROOT, 'data/unique-names.json'),
   report: path.join(ROOT, 'GAME-DATA-UPDATE.local.md')
 }
@@ -42,9 +47,9 @@ const NAME_KEEP = new Set(['titucusspan', 'todust', 'wildfire'])
 // ------------------------------------------------------------------ args
 const args = process.argv.slice(2)
 const opt = (name) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined }
-const TW = opt('--tw'), GLOBAL = opt('--global'), VERSION = opt('--version'), WRITE = args.includes('--write')
+const TW = opt('--tw'), GLOBAL = opt('--global'), CN = opt('--cn'), VERSION = opt('--version'), WRITE = args.includes('--write')
 if (!TW) {
-  console.error('usage: pnpm run update-data -- --tw <TW Content.ggpk> [--global <intl Content.ggpk>] [--version X] [--write]')
+  console.error('usage: pnpm run update-data -- --tw <TW Content.ggpk> [--global <intl Content.ggpk>] [--cn <国服 Bundles2 folder>] [--version X] [--write]')
   process.exit(1)
 }
 for (const f of [TW, GLOBAL].filter(Boolean)) if (!fs.existsSync(f)) { console.error('not found:', f); process.exit(1) }
@@ -60,7 +65,7 @@ try {
 const t0 = Date.now()
 const log = (...a) => console.log(`[${((Date.now() - t0) / 1000).toFixed(0).padStart(3)}s]`, ...a)
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'pztt-update-'))
-const out = { stat: path.join(TMP, 'stat-templates.json'), props: path.join(TMP, 'property-strings.ts'), names: path.join(TMP, 'unique-names.json') }
+const out = { stat: path.join(TMP, 'stat-templates.json'), props: path.join(TMP, 'property-strings.ts'), propsCn: path.join(TMP, 'property-strings-cn.ts'), names: path.join(TMP, 'unique-names.json') }
 const R = [] // report lines
 const fail = (msg) => { console.error('✖', msg); fs.writeFileSync(P.report, R.join('\n') + `\n\n**FAILED:** ${msg}\n`); process.exit(1) }
 
@@ -77,13 +82,13 @@ R.push(`# Game data update — ${new Date().toISOString().slice(0, 16).replace('
 
 // ------------------------------------------------------------------ 1. mod lines
 log('1/5 mod lines (stat-templates)…')
-const statStdout = runNode('gen-stat-templates.mjs', [TW, P.stat, P.overrides, out.stat, '--update', ...(VERSION ? ['--version', VERSION] : [])])
+const statStdout = runNode('gen-stat-templates.mjs', [TW, P.stat, P.overrides, out.stat, '--update', ...(VERSION ? ['--version', VERSION] : []), ...(CN ? ['--cn', CN] : [])])
 let statReport = {}
 try { statReport = JSON.parse(statStdout.slice(statStdout.lastIndexOf('\n{') + 1)).report || {} } catch { /* keep going */ }
 {
   const a = JSON.parse(fs.readFileSync(P.stat, 'utf8')), b = JSON.parse(fs.readFileSync(out.stat, 'utf8'))
   R.push('## 1. Mod lines — data/stat-templates.json', '')
-  for (const L of ['tw', 'cn', 'twIdx', 'cnIdx', 'twText']) {
+  for (const L of ['tw', 'cn', 'twIdx', 'cnIdx', 'twText', 'cnText']) {
     const A = a[L] || {}, B = b[L] || {}
     const added = Object.keys(B).filter((k) => !(k in A)), removed = Object.keys(A).filter((k) => !(k in B))
     const changed = Object.keys(B).filter((k) => k in A && A[k] !== B[k])
@@ -104,7 +109,7 @@ try { statReport = JSON.parse(statStdout.slice(statStdout.lastIndexOf('\n{') + 1
 
 // ------------------------------------------------------------------ 2. property lines
 log('2/5 property lines…')
-runNode('gen-property-strings.mjs', [TW, out.props])
+runNode('gen-property-strings.mjs', [TW, out.props, ...(CN ? ['--cn', CN, out.propsCn] : [])])
 {
   const keys = (f) => new Map([...fs.readFileSync(f, 'utf8').matchAll(/^\s+("(?:[^"\\]|\\.)*"): ("(?:[^"\\]|\\.)*")/gm)].map((m) => [JSON.parse(m[1]), JSON.parse(m[2])]))
   const A = keys(P.props), B = keys(out.props)
@@ -187,7 +192,7 @@ if (!WRITE) {
   process.exit(0)
 }
 log('5/5 writing + unit tests…')
-const targets = [[out.stat, P.stat], [out.props, P.props], [out.names, P.names]]
+const targets = [[out.stat, P.stat], [out.props, P.props], [out.names, P.names], ...(CN ? [[out.propsCn, P.propsCn]] : [])]
 const backups = targets.map(([, dst]) => [dst, fs.readFileSync(dst)])
 for (const [src, dst] of targets) fs.copyFileSync(src, dst)
 const t = spawnSync(process.execPath, ['--no-warnings', '--experimental-strip-types', '--test', 'tests/*.test.mjs'],

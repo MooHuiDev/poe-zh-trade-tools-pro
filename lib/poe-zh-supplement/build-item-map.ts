@@ -285,6 +285,19 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
     for (const k in BEAST_NAMES_CN) cnMap[k] = BEAST_NAMES_CN[k]
     // 国服 base-item names (PoeDB) for bases the TW API lacks.
     for (const k in BASE_NAMES_CN) cnMap[k] = BASE_NAMES_CN[k]
+    // Official 国服 base-item names (bases, currency, cards, gems … from the
+    // 国服 client, data/stat-templates.json "cnName") win over the 繁->简 seed and
+    // PoeDB. Unique-name keys are left to CN_DICT. Same shared download as the
+    // stat templates below. Older data has no cnName -> nothing changes.
+    try {
+      const cnName = (await loadRemoteStatTemplates())?.cnName
+      if (cnName && typeof cnName === "object") {
+        for (const [k, v] of Object.entries(cnName))
+          if (v && !uniqueKeys.has(k)) cnMap[k] = v
+      }
+    } catch {
+      // keep the converted names
+    }
     // Fix the "(<Map>)" suffix on CN item names for maps the TW Atlas lacks —
     // covers Scrying Orb, Blighted Map, Blight-ravaged Map and any other
     // `disc`-tagged map-suffixed item that shares the map id. cnMap was seeded
@@ -396,8 +409,10 @@ export const buildAndStoreZhItemMap = async (force = false): Promise<void> => {
           zhStatTpl_cn: cnTpl,
           zhStatTplIdx_tw: st?.twIdx || {},
           zhStatTplIdx_cn: st?.cnIdx || {},
-          // Other game texts (affix names, descriptions, names …), Traditional only.
-          zhStatText_tw: st?.twText || {}
+          // Other game texts (affix names, descriptions, names …). cnText (国服
+          // client) exists from data generated with --cn; older data lacks it.
+          zhStatText_tw: st?.twText || {},
+          zhStatText_cn: st?.cnText || {}
         })
         console.log(
           `[zh-supp] stat templates stored: tw ${Object.keys(twTpl).length}, ` +

@@ -332,6 +332,17 @@ export const englishTranslations: Record<string, TranslationValue> = {
   "about.whatsNewDescription":
     "See this version's release notes on GitHub.",
   "about.whatsNewButton": "View release notes",
+  "about.feedbackTitle": "Bug report & suggestions",
+  "about.feedbackDescription": "Found a bug or have an idea? Let us know.",
+  "about.feedbackButton": "Report a bug / Suggest",
+  "about.feedbackDialogTitle": "Choose where to send feedback",
+  "about.feedbackBahamut": "Bahamut (巴哈姆特)",
+  "about.feedbackBahamutHint": "Reply / comment in the forum thread, images welcome",
+  "about.feedbackGithub": "GitHub",
+  "about.feedbackGithubHint": "Issues — best for images and steps to reproduce",
+  "about.feedbackDiscord": "Discord",
+  "about.feedbackDiscordHint": "Join the server to chat live, images welcome",
+  "about.feedbackClose": "Close",
   "about.dataVersion": "Localization data",
   "bulk.empty":
     "No bulk sellers detected yet. Open a trade result list where the same seller appears more than once.",

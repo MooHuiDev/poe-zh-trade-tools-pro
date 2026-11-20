@@ -182,6 +182,15 @@ export default defineContentScript({
         if (mercZh && mercZh !== trimmed) node.nodeValue = raw.replace(trimmed, mercZh)
         return
       }
+      // Valdo map reward "Foil <Unique>" -> 貼模 (<中文名>), the game's own
+      // format (ClientStrings ItemDisplayFoilReliquaryReward: "Foil {0}" ->
+      // "貼模 ({0})", same as the Taiwan market shows).
+      const foil = trimmed.match(/^Foil (.+)$/)
+      if (foil) {
+        const name = lookup(normalize(foil[1]))
+        if (name && hasChinese(name)) node.nodeValue = raw.replace(trimmed, `${s("貼模")} (${name})`)
+        return
+      }
       const zh = lookup(normalize(trimmed))
       if (!zh || zh === trimmed) return
       // Inside filter dropdown options, keep the English in parentheses so it

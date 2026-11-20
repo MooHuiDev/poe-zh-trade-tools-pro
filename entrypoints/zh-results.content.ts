@@ -1,5 +1,6 @@
 import { NOTABLES_ZH_TW } from "~/lib/poe-zh-core/notables"
 import { GEM_TAGS_TW, PROPERTY_STRINGS_TW } from "~/lib/poe-zh-core/property-strings"
+import { GEM_TAGS_CN, PROPERTY_STRINGS_CN } from "~/lib/poe-zh-core/property-strings-cn"
 import { toSimplified } from "~/lib/poe-zh-cn/convert"
 import { translateLine } from "~/lib/poe-zh-core/stat-translate"
 import { resolvePropertyText } from "~/lib/poe-zh-core/property-translate"
@@ -27,8 +28,9 @@ export default defineContentScript({
       state.language === "zh-cn" ? "zhCore_cn_modmap" : "zhCore_modmap"
     const statTplKey =
       state.language === "zh-cn" ? "zhStatTpl_cn" : "zhStatTpl_tw"
-    // Other game texts (affix names, descriptions, names …) — Traditional only.
-    const statTextKey = state.language === "zh-cn" ? "" : "zhStatText_tw"
+    // Other game texts (affix names, descriptions, names …). Simplified comes
+    // from the 国服 client (cnText); empty until that data is available.
+    const statTextKey = state.language === "zh-cn" ? "zhStatText_cn" : "zhStatText_tw"
     const statTplIdxKey =
       state.language === "zh-cn" ? "zhStatTplIdx_cn" : "zhStatTplIdx_tw"
 
@@ -249,6 +251,11 @@ export default defineContentScript({
     const toLang = (zh: string) => (state.language === "zh-cn" ? toSimplified(zh) : zh)
     for (const [en, zh] of Object.entries(PROPERTY_STRINGS_TW)) PROPS[en] = toLang(zh)
     for (const [en, zh] of Object.entries(GEM_TAGS_TW)) TAGS[en] = toLang(zh)
+    // 简中: the 国服 client's own wording wins; 繁->简 above only fills gaps.
+    if (state.language === "zh-cn") {
+      Object.assign(PROPS, PROPERTY_STRINGS_CN)
+      Object.assign(TAGS, GEM_TAGS_CN)
+    }
     const translatePropertySpan = (span: HTMLElement) => {
       const nodes = Array.from(span.childNodes)
       let key = ""
