@@ -347,6 +347,33 @@ const buildText = (readFile, folder, label) => {
     if (best.length > 1) multi++
     genText[k] = best[0][0]
   }
+  // Temple rooms on Chronicles of Atzoatl: "Armoury (Tier 2)" -> 軍械庫 (階級 2).
+  // Room names: IncursionRooms Name @8; the "(Tier {0})" suffix is the game's
+  // own ClientStrings IncursionRoomPopupTier. Key keeps the tier as "#" so the
+  // number is filled at runtime (no extension change needed).
+  try {
+    const rooms = readDatFile('data/incursionrooms.datc64', readFile('data/incursionrooms.datc64'))
+    const roomsZ = readDatFile(`data/${folder}/incursionrooms.datc64`, readFile(`data/${folder}/incursionrooms.datc64`))
+    const en = readColumn({ offset: 8, type: { string: {} } }, rooms)
+    const zh = readColumn({ offset: 8, type: { string: {} } }, roomsZ)
+    const csE = readDatFile('data/clientstrings.datc64', readFile('data/clientstrings.datc64'))
+    const csZ = readDatFile(`data/${folder}/clientstrings.datc64`, readFile(`data/${folder}/clientstrings.datc64`))
+    const ids = readColumn({ offset: 0, type: { string: {} } }, csE)
+    const csZh = readColumn({ offset: 8, type: { string: {} } }, csZ)
+    const tierZh = csZh[ids.indexOf('IncursionRoomPopupTier')] || ''
+    let rooms_ = 0
+    if (tierZh.includes('{0}')) {
+      en.forEach((e, i) => {
+        const z = (zh[i] || '').trim()
+        if (!e || !z || e === z || !/[\u4e00-\u9fff]/.test(z)) return
+        const k = normEn(e)
+        if (k && !(k in genText)) genText[k] = z
+        const kt = normEn(`${e} (Tier #)`)
+        if (kt && !(kt in genText)) { genText[kt] = `${z} ${tierZh.replace('{0}', '#')}`; rooms_++ }
+      })
+    }
+    log(`temple rooms (${label}):`, rooms_)
+  } catch (e) { log('⚠ temple rooms skipped:', e.message) }
   log(`other game texts (${label}):`, Object.keys(genText).length, '(with several translations, most common kept:', multi + ')')
   return genText
 }

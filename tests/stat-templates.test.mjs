@@ -207,3 +207,9 @@ test("property-strings-cn: 国服 property labels and gem tags", () => {
   assert.equal(PROPERTY_STRINGS_CN["Physical Damage"], "物理伤害")
   assert.ok(Object.keys(GEM_TAGS_CN).length > 30)
 })
+
+test("data: temple rooms on Chronicles of Atzoatl (tier filled at runtime)", () => {
+  assert.equal(translateLine(data.tw, data.twIdx, data.twText, "Sacrificial Chamber (Tier 1)"), "獻祭之室 (階級 1)")
+  assert.equal(translateLine(data.tw, data.twIdx, data.twText, "Tombs"), "神殿陵寢")
+  assert.equal(translateLine(data.cn, data.cnIdx, data.cnText, "Armoury (Tier 2)"), "装备库 (等阶:2)")
+})
