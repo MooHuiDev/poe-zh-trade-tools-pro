@@ -67,3 +67,26 @@ export function openGgpk(ggpkPath) {
     column: (file, offset, type = { string: {} }) => readColumn({ offset, type }, readDatFile(file, read(file)))
   }
 }
+
+// Clients without a Content.ggpk (e.g. the Tencent 国服 client) keep the same
+// bundles as loose files in a `Bundles2` folder. Same interface as openGgpk.
+//   openBundlesDir('D:/Poe_CN/流放之路(511)/Bundles2')
+// The 国服 client has `data/simplified chinese/` (official 简中 names).
+export function openBundlesDir(bundlesDir) {
+  const rb = (rel) => new Uint8Array(fs.readFileSync(`${bundlesDir}/${rel}`))
+  const unbundle = (bin) => { const o = new Uint8Array(decompressedBundleSize(bin)); decompressSliceInBundle(bin, 0, o); return o }
+  const index = readIndexBundle(unbundle(rb('_.index.bin')))
+  const pathReps = unbundle(index.pathRepsBundle)
+  const bundleCache = new Map()
+  const read = (p) => {
+    const loc = getFileInfo(p, index.bundlesInfo, index.filesInfo); if (!loc) throw new Error('not in index: ' + p)
+    let bin = bundleCache.get(loc.bundle); if (!bin) { bin = rb(loc.bundle); bundleCache.set(loc.bundle, bin) }
+    const o = new Uint8Array(loc.size); decompressSliceInBundle(bin, loc.offset, o); return o
+  }
+  return {
+    read,
+    has: (p) => !!getFileInfo(p, index.bundlesInfo, index.filesInfo),
+    dir: (p) => getDirContent(p, pathReps, index.dirsInfo),
+    column: (file, offset, type = { string: {} }) => readColumn({ offset, type }, readDatFile(file, read(file)))
+  }
+}
